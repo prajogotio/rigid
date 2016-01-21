@@ -1,0 +1,11 @@
+Impulse
+http://chrishecker.com/images/e/e7/Gdmphys3.pdf
+
+Separating Axis Theorem
+http://gamedevelopment.tutsplus.com/tutorials/collision-detection-with-the-separating-axis-theorem--gamedev-169
+
+Rigid Body Physics
+http://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
+
+Clipping
+http://www.dyn4j.org/2011/11/contact-points-using-clipping/

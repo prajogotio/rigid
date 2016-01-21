@@ -1,0 +1,183 @@
+<html>
+<head>
+	<script src="rigid.js"></script>
+</head>
+<body>
+	<canvas id="canvas" width="1000" height="600" >
+	</canvas>
+	<script>
+	var canvas = document.getElementById('canvas');
+	var g = canvas.getContext('2d');
+	g.lineWidth = 3;
+	function draw(b) {
+		g.beginPath();
+		g.strokeStyle = "black";
+		g.moveTo(b.getAbsolutePosition(b.v[0]).x, b.getAbsolutePosition(b.v[0]).y);
+		for (var i = 1; i < b.v.length;++i) {
+			g.lineTo(b.getAbsolutePosition(b.v[i]).x, b.getAbsolutePosition(b.v[i]).y);
+		}
+		g.closePath();
+		g.stroke();
+	}
+
+	function drawDirection(n) {
+		g.save();
+		g.strokeStyle = "red"
+		g.translate(300, 300);
+		g.fillRect(0,0,4,4);
+		g.beginPath();
+		g.moveTo(0,0);
+		g.lineTo(n.x*100, n.y*100);
+		g.stroke();
+		g.restore();
+	}
+
+	function drawEdge(edge) {
+		g.strokeStyle = "#1fa";
+		g.beginPath();
+		g.moveTo(edge[0].x, edge[0].y);
+		g.lineTo(edge[1].x, edge[1].y);
+		g.stroke();
+		g.restore();
+	}
+
+	function drawContactPoint(pt) {
+		g.fillStyle = "red";
+		g.fillRect(pt.x, pt.y, 6, 6);
+	}
+
+	function drawCollision() {
+		g.fillRect(0,0,8,8);
+	}
+
+	function test() {
+		var A = new Body(new Vec2(30, 30), [new Vec2(-50,-50),
+					  new Vec2(-50,50),
+					  new Vec2(50,50),
+					  new Vec2(50,-50)],
+					  35,
+					  0.5,
+					  100,
+					  new Vec2(1, 2),
+					  null,
+					  0.3);
+		var B = new Body(new Vec2(230, 230), [new Vec2(0,70),
+					  new Vec2(100,0),
+					  new Vec2(-44,0)],
+					  40,
+					  0.8,
+					  100,
+					  new Vec2(0, 0));
+		var t = setInterval(function() {
+			g.clearRect(0,0,canvas,600);
+			draw(A);
+			draw(B);
+			var n = A.axisOfLeastSeparationWith(B).axis;
+			
+			if (A.collidesWith(B)) {
+				drawCollision();
+			}
+
+			drawDirection(n);
+
+			var ref = A.getBestContactEdge(n);
+			var inc = B.getBestContactEdge(n.flip());
+
+			drawEdge(ref);
+			drawEdge(inc);
+
+			var contacts = getContactPoints(ref, inc);
+			for (var i = 0; i < contacts.length; ++i) {
+				drawContactPoint(contacts[i]);
+			}
+		}, 1000/60);
+		addEventListener("keydown", function(e){
+			if (e.which == 13) {
+				clearInterval(t);
+			} else if (e.which == 38) {
+				A.cm.y -= 5;
+			} else if (e.which == 40) {
+				A.cm.y += 5;
+			} else if (e.which == 37) {
+				A.cm.x -= 5;
+			} else if (e.which == 39) {
+				A.cm.x += 5;
+			}
+		});
+	}
+
+	function testCollision() {
+		var A = new Body(new Vec2(30, 30), [new Vec2(-50,-50),
+					  new Vec2(-50,50),
+					  new Vec2(50,50),
+					  new Vec2(50,-50)],
+					  35,
+					  0.5,
+					  100,
+					  new Vec2(1, 2),
+					  null,
+					  Math.PI/1200);
+		var B = new Body(new Vec2(230, 230), [new Vec2(0,70),
+					  new Vec2(100,0),
+					  new Vec2(-44,0)],
+					  40,
+					  0.8,
+					  100,
+					  new Vec2(0, 0),
+					  null,
+					  Math.PI/1300);
+		var t = setInterval(function() {
+			g.clearRect(0,0,600,600);
+			if (A.collidesWith(B)) {
+				drawCollision();
+				resolveCollision(A, B);
+			}
+			A.integrate(0.1);
+			B.integrate(0.1);
+			draw(A);
+			draw(B);
+		});
+		addEventListener("keydown", function(){ clearInterval(t); })
+	}
+
+	function testPlatform() {
+		var p = [];
+		p.push(new Body(new Vec2(canvas.width/2, 500),
+						[new Vec2(-400, 30), new Vec2(400, 30),
+						new Vec2(400, -30), new Vec2(-400, -30)],
+						0, 0.2, 0));
+		function addRectangle(x, y) {
+			var width = 60;
+			p.push(new Body(new Vec2(x, y),
+							[new Vec2(-width/2, width/2), new Vec2(width/2, width/2),
+							new Vec2(width/2, -width/2), new Vec2(-width/2, -width/2)],
+							40, 0.7, 400,
+							null,
+							new Vec2(0, 0.8)));
+		}
+		var t = setInterval(function() {
+			g.clearRect(0,0,canvas.width,canvas.height);
+			for (var i = 0; i < p.length; ++i) {
+				for (var j = i+1; j < p.length; ++j) {
+					if (p[i].collidesWith(p[j])) {
+						resolveCollision(p[i], p[j]);
+					}
+				}
+			}
+			for (var i = 0; i < p.length; ++i) {
+				p[i].integrate(0.1);
+			}
+			for (var i = 0; i < p.length; ++i) {
+				draw(p[i]);
+			}
+		});
+		addEventListener("keydown", function(){ clearInterval(t); })
+		canvas.addEventListener("mousedown", function(e) {
+			var x = e.offsetX;
+			var y =e.offsetY;
+			addRectangle(x, y);
+		});
+	}
+	</script>
+</body>
+</html>
