@@ -24,6 +24,8 @@ function Body(cm, arrayOfVertices,
 	this.angularVelocity = angularVelocity || 0; // scalar radian
 	this.angularPosition = 0;	// radian
 
+	this.staticFriction = 0.1;
+	this.dynamicFriction = 0.05;
 }
 
 Body.prototype.getAbsolutePosition = function(v) {
@@ -100,7 +102,7 @@ Body.prototype.integrate = function(dt) {
 	this.cm = this.cm.plus(this.velocity.times(dt));
 
 	// rotational
-	this.angularPosition += this.angularVelocity;
+	this.angularPosition += this.angularVelocity*dt;
 }
 
 Body.prototype.applyImpulse = function(j, n) {
@@ -109,6 +111,12 @@ Body.prototype.applyImpulse = function(j, n) {
 
 	// translational
 	this.velocity = this.velocity.plus(n.times(j*this.inverseMass));
+}
+
+Body.prototype.applyRotationalImpulse = function(j, n, c) {
+	// rotational
+	var r = c.minus(this.cm);
+	this.angularVelocity += j*this.inverseMomentOfInertia*(r.x*n.y - r.y*n.x);
 }
 
 
@@ -173,6 +181,33 @@ function checkProjectionsOverlap(A, B, n) {
 	return !(Amax <= Bmin || Bmax <= Amin);
 }
 
+function applyFriction(A, B, n, j) {
+	// vrel is relative velocity of B seen from A
+	// A is the reference
+	var vrel = B.velocity.minus(A.velocity);
+
+	var tangent = vrel.minus(n.times(-vrel.dot(n)));
+	tangent.normalize();
+
+	var f = -vrel.dot(tangent) / (A.inverseMass + B.inverseMass);
+	
+	// combined static friction
+	var us = Math.sqrt(A.staticFriction*A.staticFriction+B.staticFriction*B.staticFriction);
+	
+	var frictionImpulse;
+	if (Math.abs(f) < j * us) {
+		frictionImpulse = tangent.times(f);
+	} else {
+		// combined dynamic friction
+		var ud = Math.sqrt(A.dynamicFriction*A.dynamicFriction + B.dynamicFriction*B.dynamicFriction);
+		frictionImpulse = tangent.times(-j * ud);
+	}
+	A.velocity = A.velocity.minus(frictionImpulse.times(A.inverseMass));
+	B.velocity = B.velocity.plus(frictionImpulse.times(B.inverseMass));
+
+
+}
+
 function resolveCollision(A, B) {
 	// polygon-polygon resolver for point B
 	// A is the reference
@@ -184,6 +219,7 @@ function resolveCollision(A, B) {
 	var n = res.axis;
 	var depth = res.depth;
 
+
 	// getting contact of incident B
 	var ref = A.getBestContactEdge(n);
 	var inc = B.getBestContactEdge(n.flip());
@@ -193,28 +229,50 @@ function resolveCollision(A, B) {
 	// relative velocity of B as seen from A
 	var vrel = B.velocity.minus(A.velocity);
 	var proj = vrel.dot(n);
-	if (proj > 1e-12) {
-		// objects moving away from each other
-		return;
-	}
-	if (proj > -1e-12) {
-		positionalCorrection(A, B, n, depth);
-		return;
-	}
+	
+	// if (proj > 0) {
+	// 	positionalCorrection(A, B, n, depth);
+	// 	return;
+	// }
+	
 	// use the one with lower elasticity
-	var e = Math.min(A.e, B.e);
-	var j = -(1+e)*proj/(A.inverseMass + B.inverseMass);
-	A.applyImpulse(-j, n);
-	B.applyImpulse(j, n);
+	for (var i = 0; i < contacts.length; ++i) {		
+		var c = contacts[i];
+		var rA = contacts[i].minus(A.cm).dot(n);
+		rA *= rA;
+		var rB = contacts[i].minus(B.cm).dot(n);
+		rB *= rB;
+
+		var e = Math.min(A.e, B.e);
+		var j = -(1+e)*proj/(A.inverseMass + B.inverseMass + rA*A.inverseMomentOfInertia + rB*B.inverseMomentOfInertia);
+		A.applyImpulse(-j/contacts.length, n);
+		B.applyImpulse(j/contacts.length, n);
+		A.applyRotationalImpulse(-j, n, c);
+		B.applyRotationalImpulse(j, n, c);
+
+	}
+
 	positionalCorrection(A, B, n, depth);
 }
 
 function positionalCorrection(A, B, n, depth) {
 	// A is the reference body
 	// n points out of A
-	var CORRECTION_RATE = 0.2;
-	var correction = depth/(A.inverseMass + B.inverseMass);
+	var CORRECTION_RATE = 1;
+	var correction = CORRECTION_RATE * depth/(A.inverseMass + B.inverseMass);
 	A.cm = A.cm.plus(n.flip().times(correction*A.inverseMass));
 	B.cm = B.cm.plus(n.times(correction*B.inverseMass));
-	
 }
+
+function resolveCollisionExtended(A, B) {
+	var resA = A.axisOfLeastSeparationWith(B);
+	var resB = B.axisOfLeastSeparationWith(A);
+	if (resA.depth < resB.depth) {
+		resolveCollision(A, B);
+		drawDirection(resA.axis);
+	 } else {
+	 	resolveCollision(B, A);
+	 	drawDirection(resB.axis);
+	}
+}
+

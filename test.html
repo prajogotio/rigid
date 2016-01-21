@@ -148,34 +148,57 @@
 						0, 0.2, 0));
 		function addRectangle(x, y) {
 			var width = 60;
+			var mass = 100;
 			p.push(new Body(new Vec2(x, y),
 							[new Vec2(-width/2, width/2), new Vec2(width/2, width/2),
 							new Vec2(width/2, -width/2), new Vec2(-width/2, -width/2)],
-							40, 0.7, 400,
+							mass, 0.7, mass*width*width,
 							null,
-							new Vec2(0, 0.8)));
+							new Vec2(0, 12.8)));
+		}
+		function addTriangle(x, y) {
+			var a = 60;
+			var mass = 100;
+			p.push(new Body(new Vec2(x, y),
+							[new Vec2(0, a), 
+							new Vec2(a/2*Math.sqrt(3), -a/2),
+							new Vec2(-a/2*Math.sqrt(3), -a/2)],
+							mass, 0.7, mass*a*a,
+							null,
+							new Vec2(0, 12.8)));
 		}
 		var t = setInterval(function() {
 			g.clearRect(0,0,canvas.width,canvas.height);
 			for (var i = 0; i < p.length; ++i) {
+				p[i].integrate(0.05);
+			}
+			for (var i = 0; i < p.length; ++i) {
 				for (var j = i+1; j < p.length; ++j) {
 					if (p[i].collidesWith(p[j])) {
-						resolveCollision(p[i], p[j]);
+						resolveCollisionExtended(p[i], p[j]);
 					}
 				}
 			}
 			for (var i = 0; i < p.length; ++i) {
-				p[i].integrate(0.1);
-			}
-			for (var i = 0; i < p.length; ++i) {
 				draw(p[i]);
 			}
-		});
-		addEventListener("keydown", function(){ clearInterval(t); })
+		}, 1000/60);
+		var key = 65;
+		addEventListener("keydown", function(e){ 
+			if (e.which == 32) {
+				clearInterval(t);
+				console.log(p);
+			}
+			key = e.which;
+		})
 		canvas.addEventListener("mousedown", function(e) {
 			var x = e.offsetX;
 			var y =e.offsetY;
-			addRectangle(x, y);
+			if (key == 65) {
+				addRectangle(x, y);
+			} else if (key == 66) {
+				addTriangle(x, y);
+			}
 		});
 	}
 	</script>
