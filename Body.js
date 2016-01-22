@@ -25,8 +25,8 @@ function Body(cm, arrayOfVertices,
 	this.angularVelocity = angularVelocity || 0; // scalar radian
 	this.angularPosition = 0;	// radian
 
-	this.staticFriction = 0.44;
-	this.dynamicFriction = 0.33;
+	this.staticFriction = 0.3;
+	this.dynamicFriction = 0.1;
 
 	this.ANGULAR_DECAY = 0.98;
 }
@@ -43,6 +43,7 @@ Body.prototype.axisOfLeastSeparationWith = function(b) {
 	if (b instanceof Sphere) {
 		return b.axisOfLeastSeparationWith(this);
 	}
+
 	// b is another Polygon
 	var MINIMUM_LENGTH = -1e301;
 	var MAXIMUM_LENGTH = 1e301;
@@ -59,8 +60,13 @@ Body.prototype.axisOfLeastSeparationWith = function(b) {
 			chosen = i;
 		}
 	}
+
+	// support point way
+	var axis = this.getAbsoluteDirection(this.n[chosen]);
+
+
 	return {
-		axis: this.getAbsoluteDirection(this.n[chosen]),
+		axis: axis,
 		depth: minLength,
 	};
 }
@@ -175,6 +181,7 @@ function clip(A, dir, points, n, withReplacement) {
 
 function checkProjectionsOverlap(A, B, n) {
 	var MAXIMUM_VALUE = 1e301, MINIMUM_VALUE = -1e301;
+	var TOLERANCE = 0;
 	var Amin = MAXIMUM_VALUE,
 		Amax = MINIMUM_VALUE,
 		Bmin = MAXIMUM_VALUE,
@@ -200,19 +207,23 @@ function checkProjectionsOverlap(A, B, n) {
 			Bmax = Math.max(Bmax, cur);
 		}
 	}
-	return !(Amax <= Bmin || Bmax <= Amin);
+	return !(Amax-TOLERANCE <= Bmin || Bmax-TOLERANCE <= Amin);
 }
 
-function applyFriction(A, B, n, j, c) {
+function applyFriction(A, B, n, j, c, vrel) {
 	// vrel is relative velocity of B seen from A
 	// A is the reference
-	var vrel = B.velocity.minus(A.velocity);
+	// var vrel = B.velocity.minus(A.velocity);
 
 	var tangent = vrel.minus(n.times(vrel.dot(n)));
 	tangent.normalize();
 	//if (Math.abs(tangent.x) < 0.1) tangent.x = 0;
 
-	var f = vrel.dot(tangent) / (A.inverseMass + B.inverseMass);
+	var rA = c.minus(A.cm);
+	var rB = c.minus(B.cm);
+
+
+	var f = vrel.dot(tangent) / (A.inverseMass + B.inverseMass + A.inverseMomentOfInertia*Math.pow(rA.cross(tangent), 2) + B.inverseMomentOfInertia*Math.pow(rB.cross(tangent), 2));
 	
 	// combined static friction
 	var us = Math.sqrt(A.staticFriction*A.staticFriction+B.staticFriction*B.staticFriction);
@@ -228,13 +239,10 @@ function applyFriction(A, B, n, j, c) {
 	A.velocity = A.velocity.plus(frictionImpulse.times(A.inverseMass));
 	B.velocity = B.velocity.minus(frictionImpulse.times(B.inverseMass));
 
-	var Ar = c.minus(A.cm);
-	var Br = c.minus(B.cm);
-
-	A.angularVelocity -= A.inverseMomentOfInertia*(Ar.cross(frictionImpulse));
-	B.angularVelocity -= B.inverseMomentOfInertia*(Br.cross(frictionImpulse));
-
+	A.angularVelocity -= A.inverseMomentOfInertia*(rA.cross(frictionImpulse));
+	B.angularVelocity -= B.inverseMomentOfInertia*(rB.cross(frictionImpulse));
 }
+
 
 function resolveCollision(A, B) {
 	// A is the reference
@@ -286,27 +294,29 @@ function resolveCollision(A, B) {
 	// 	applyFriction(A, B, n, j/contacts.length);
 	// }
 	positionalCorrection(A, B, n, depth);
-	if (proj > 1e-9) return;
+
+	if (proj > 0) return;
 
 	for (var i = 0; i < contacts.length; ++i) {	
-		// var vrel = B.velocity.minus(A.velocity);
-		// var proj = vrel.dot(n);
+		//var vrel = B.velocity.minus(A.velocity);
+		//var proj = vrel.dot(n);
 		// if (proj > 1e-9) break;
 
 		var c = contacts[i];
-		var rA = contacts[i].minus(A.cm).dot(n);
-		var rB = contacts[i].minus(B.cm).dot(n);
+		var rA = contacts[i].minus(A.cm).cross(n);
+		var rB = contacts[i].minus(B.cm).cross(n);
 
 
+		drawContactPoint(c);
 		var e = Math.min(A.e, B.e);
 		var j = -(1+e)*proj/(A.inverseMass + B.inverseMass + rA*rA*A.inverseMomentOfInertia + rB*rB*B.inverseMomentOfInertia);
-		j /= contacts.length;
+
 		A.applyImpulse(-j, n);
 		B.applyImpulse(j, n);
 		A.applyRotationalImpulse(-j, n, c);
 		B.applyRotationalImpulse(j, n, c);
-		applyFriction(A, B, n, j, c);
-	}
+		applyFriction(A, B, n, j, c, vrel);
+	}	
 
 }
 
@@ -315,9 +325,10 @@ function positionalCorrection(A, B, n, depth) {
 	// n points out of A
 	var CORRECTION_RATE = 1;
 	var correction = CORRECTION_RATE * depth/(A.inverseMass + B.inverseMass);
-	// if (Math.abs(n.x*correction)<4) n.x = 0;
+	// if (Math.abs(n.x*correction)<2) n.x = 0;
 	A.cm = A.cm.plus(n.flip().times(correction*A.inverseMass));
 	B.cm = B.cm.plus(n.times(correction*B.inverseMass));
+
 }
 
 function resolveCollisionExtended(A, B) {

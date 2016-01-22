@@ -158,41 +158,42 @@
 		p.push(new Body(new Vec2(canvas.width/2, 500),
 						[new Vec2(-400, 30), new Vec2(400, 30),
 						new Vec2(400, -30), new Vec2(-400, -30)],
-						0, 0.2, 0));
+						0, 1, 0));
 		function addRectangle(x, y) {
-			var width = 60;
+			var width = 30;
 			var mass = 100;
 			p.push(new Body(new Vec2(x, y),
 							[new Vec2(-width/2, width/2), new Vec2(width/2, width/2),
 							new Vec2(width/2, -width/2), new Vec2(-width/2, -width/2)],
-							mass, 0.7, mass*width*width,
+							mass, 0.3, mass*width*width/6,
 							null,
 							grav));
 		}
 		function addTriangle(x, y) {
-			var a = 60;
+			var a = 20;
 			var mass = 100;
 			p.push(new Body(new Vec2(x, y),
 							[new Vec2(0, a), 
 							new Vec2(a/2*Math.sqrt(3), -a/2),
 							new Vec2(-a/2*Math.sqrt(3), -a/2)],
-							mass, 0.7, mass*a*a,
+							mass, 0.1, mass*a*a/6,
 							null,
 							grav));
 		}
 		function addSphere(x, y) {
-			var r = 50;
+			var r = 20;
 			var mass = 70;
-			p.push(new Sphere(new Vec2(x,y), r, mass, 0.9, mass*r*r*2/5,
+			p.push(new Sphere(new Vec2(x,y), r, mass, 0.1, mass*r*r*2/5,
 					null, grav));
 		}
 		var dt = 1/30;
-		var ITERATION = 14;
+		var ITERATION = 10;
 		var t = setInterval(function() {
 			g.clearRect(0,0,canvas.width,canvas.height);
 			for (var iter = 0; iter < ITERATION; ++iter) {
 				for (var i = 0; i < p.length; ++i) {
 					for (var j = i+1; j < p.length; ++j) {
+						if (i == j) continue;
 						if (p[i].collidesWith(p[j])) {
 							resolveCollisionExtended(p[i], p[j]);
 						}

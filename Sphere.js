@@ -18,8 +18,8 @@ function Sphere(cm, radius,
 	this.angularVelocity = angularVelocity || 0; // scalar radian
 	this.angularPosition = 0;	// radian
 
-	this.staticFriction = 0.43;
-	this.dynamicFriction = 0.33;
+	this.staticFriction = 0.3;
+	this.dynamicFriction = 0.1;
 
 	this.ANGULAR_DECAY = 0.90;
 }
