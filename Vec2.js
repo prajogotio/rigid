@@ -9,6 +9,7 @@ Vec2.prototype.minus = function(v) {
 
 Vec2.prototype.normalize = function() {
 	var length = this.length();
+	if (length == 0) return this;
 	this.x /= length;
 	this.y /= length;
 	return this;
@@ -49,6 +50,10 @@ Vec2.prototype.times = function(c) {
 	return new Vec2(this.x * c, this.y * c);
 }
 
+Vec2.prototype.cross = function(v) {
+	return this.x*v.y - this.y*v.x;
+}
+
 function getNormal(u, v) {
 	var z = v.minus(u);
 	z.rotate(90);
@@ -78,3 +83,4 @@ function rayWithSegmentIntersection(A, n, U, V) {
 		return {consistent:true, finite:true, t: LHS/RHS, intersect:U.plus(UV.times(LHS/RHS))}
 	}
 }
+
