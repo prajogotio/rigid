@@ -153,7 +153,7 @@
 	}
 
 	function testPlatform() {
-		var grav = new Vec2(0, 339.3);
+		var grav = new Vec2(0, 200.3);
 		var p = [];
 		p.push(new Body(new Vec2(canvas.width/2, 500),
 						[new Vec2(-400, 30), new Vec2(400, 30),
@@ -183,17 +183,16 @@
 		function addSphere(x, y) {
 			var r = 50;
 			var mass = 70;
-			p.push(new Sphere(new Vec2(x,y), r, mass, 0.9, mass*r*r,
+			p.push(new Sphere(new Vec2(x,y), r, mass, 0.9, mass*r*r*2/5,
 					null, grav));
 		}
-		var dt = 1/60;
-		var ITERATION = 5;
+		var dt = 1/30;
+		var ITERATION = 14;
 		var t = setInterval(function() {
 			g.clearRect(0,0,canvas.width,canvas.height);
 			for (var iter = 0; iter < ITERATION; ++iter) {
 				for (var i = 0; i < p.length; ++i) {
-					for (var j = 0; j < p.length; ++j) {
-						if (i == j) continue;
+					for (var j = i+1; j < p.length; ++j) {
 						if (p[i].collidesWith(p[j])) {
 							resolveCollisionExtended(p[i], p[j]);
 						}

@@ -203,7 +203,7 @@ function checkProjectionsOverlap(A, B, n) {
 	return !(Amax <= Bmin || Bmax <= Amin);
 }
 
-function applyFriction(A, B, n, j) {
+function applyFriction(A, B, n, j, c) {
 	// vrel is relative velocity of B seen from A
 	// A is the reference
 	var vrel = B.velocity.minus(A.velocity);
@@ -227,6 +227,12 @@ function applyFriction(A, B, n, j) {
 	}
 	A.velocity = A.velocity.plus(frictionImpulse.times(A.inverseMass));
 	B.velocity = B.velocity.minus(frictionImpulse.times(B.inverseMass));
+
+	var Ar = c.minus(A.cm);
+	var Br = c.minus(B.cm);
+
+	A.angularVelocity -= A.inverseMomentOfInertia*(Ar.cross(frictionImpulse));
+	B.angularVelocity -= B.inverseMomentOfInertia*(Br.cross(frictionImpulse));
 
 }
 
@@ -280,14 +286,13 @@ function resolveCollision(A, B) {
 	// 	}
 	// 	applyFriction(A, B, n, j/contacts.length);
 	// }
-	if (proj > 0) return;
 	positionalCorrection(A, B, n, depth);
-
+	if (proj > 1e-9) return;
+	
 	for (var i = 0; i < contacts.length; ++i) {	
 		var vrel = B.velocity.minus(A.velocity);
 		var proj = vrel.dot(n);
-		if (proj >= 0) break;
-		drawContactPoint(contacts[i]);
+		if (proj > 1e-9) break;
 
 		var c = contacts[i];
 		var rA = contacts[i].minus(A.cm).dot(n);
@@ -300,8 +305,9 @@ function resolveCollision(A, B) {
 		B.applyImpulse(j, n);
 		A.applyRotationalImpulse(-j, n, c);
 		B.applyRotationalImpulse(j, n, c);
-		applyFriction(A, B, n, j);
+		applyFriction(A, B, n, j, c);
 	}
+
 }
 
 function positionalCorrection(A, B, n, depth) {
@@ -309,7 +315,7 @@ function positionalCorrection(A, B, n, depth) {
 	// n points out of A
 	var CORRECTION_RATE = 1;
 	var correction = CORRECTION_RATE * depth/(A.inverseMass + B.inverseMass);
-	//if (Math.abs(n.x*correction)<4) n.x = 0;
+	// if (Math.abs(n.x*correction)<4) n.x = 0;
 	A.cm = A.cm.plus(n.flip().times(correction*A.inverseMass));
 	B.cm = B.cm.plus(n.times(correction*B.inverseMass));
 }
@@ -319,10 +325,8 @@ function resolveCollisionExtended(A, B) {
 	var resB = B.axisOfLeastSeparationWith(A);
 	if (resA.depth < resB.depth) {
 		resolveCollision(A, B);
-		drawDirection(resA.axis);
-	 } else {
+	} else {
 	 	resolveCollision(B, A);
-	 	drawDirection(resB.axis);
 	}
 }
 

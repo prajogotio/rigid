@@ -55,7 +55,7 @@ Sphere.prototype.axisOfLeastSeparationWith = function(b) {
 			} else {
 				c = res.intersect;
 			}
-			var dist = c.minus(this.cm).length();
+			var dist = c.minus(this.cm).length()*(halfPlaneContains(c, n, this.cm) ? -1 : 1);
 			if (dist < lowest) {
 				contact = c;
 				lowest = dist;
@@ -64,8 +64,7 @@ Sphere.prototype.axisOfLeastSeparationWith = function(b) {
 		}
 
 		var axis = b.getAbsoluteDirection(b.n[chosen]);
-		var depth =  this.radius+(halfPlaneContains(contact, axis, this.cm) ? -1 : 1)*lowest;
-
+		var depth =  this.radius+lowest;
 		return {
 			axis : axis,
 			depth : depth,
