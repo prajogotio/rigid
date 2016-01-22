@@ -8,3 +8,5 @@ http://gafferongames.com/virtual-go/collision-response-and-coulomb-friction/
 
 Clipping
 http://www.dyn4j.org/2011/11/contact-points-using-clipping/
+
+http://www.toptal.com/game/video-game-physics-part-iii-constrained-rigid-body-simulation

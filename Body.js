@@ -27,6 +27,8 @@ function Body(cm, arrayOfVertices,
 
 	this.staticFriction = 0.66;
 	this.dynamicFriction = 0.55;
+
+	this.ANGULAR_DECAY = 0.97;
 }
 
 Body.prototype.getAbsolutePosition = function(v) {
@@ -105,7 +107,7 @@ Body.prototype.integrate = function(dt) {
 	// rotational
 	this.angularVelocity += this.torque*this.inverseMomentOfInertia*dt;
 	this.angularPosition += this.angularVelocity*dt;
-	this.angularVelocity *= 0.8;
+	this.angularVelocity *= this.ANGULAR_DECAY;
 	this.torque = 0;
 }
 
@@ -121,8 +123,8 @@ Body.prototype.applyImpulse = function(j, n) {
 Body.prototype.applyRotationalImpulse = function(j, n, c) {
 	// rotational
 	var r = c.minus(this.cm);
-	this.angularVelocity += j*this.inverseMomentOfInertia*(r.cross(n));
-	// clamping
+	var dv = j*this.inverseMomentOfInertia*(r.cross(n));
+	this.angularVelocity += dv;
 }
 
 
@@ -187,7 +189,7 @@ function checkProjectionsOverlap(A, B, n) {
 	return !(Amax <= Bmin || Bmax <= Amin);
 }
 
-function applyFriction(A, B, n, j, c) {
+function applyFriction(A, B, n, j) {
 	// vrel is relative velocity of B seen from A
 	// A is the reference
 	var vrel = B.velocity.minus(A.velocity);
@@ -211,11 +213,6 @@ function applyFriction(A, B, n, j, c) {
 	A.velocity = A.velocity.plus(frictionImpulse.times(A.inverseMass));
 	B.velocity = B.velocity.minus(frictionImpulse.times(B.inverseMass));
 
-	// var rA = c.minus(A.cm);
-	// A.angularVelocity += (rA.y*frictionImpulse.x - rA.x*frictionImpulse.y)*A.inverseMomentOfInertia;
-
-	// var rB = c.minus(B.cm);
-	// B.angularVelocity -= (rB.y*frictionImpulse.x - rB.x*frictionImpulse.y)*B.inverseMomentOfInertia;
 }
 
 function resolveCollision(A, B) {
@@ -239,9 +236,30 @@ function resolveCollision(A, B) {
 	var vrel = B.velocity.minus(A.velocity);
 	var proj = vrel.dot(n);
 	
-	
-	// use the one with lower elasticity
+
+	// for (var i = 0; i < contacts.length; ++i) {	
+
+	// 	var c = contacts[i];
+	// 	var rA = contacts[i].minus(A.cm).dot(n);
+	// 	var rB = contacts[i].minus(B.cm).dot(n);
+
+	// 	var e = Math.min(A.e, B.e);
+	// 	var j = -(1+e)*proj/(A.inverseMass + B.inverseMass + rA*rA*A.inverseMomentOfInertia + rB*rB*B.inverseMomentOfInertia);
+	// 	if(proj < 0) {
+	// 		A.applyImpulse(-j/contacts.length, n);
+	// 		B.applyImpulse(j/contacts.length, n);
+	// 		A.applyRotationalImpulse(-j/contacts.length, n, c);
+	// 		B.applyRotationalImpulse(j/contacts.length, n, c);
+	// 	}
+	// 	applyFriction(A, B, n, j/contacts.length);
+	// }
+
+
 	for (var i = 0; i < contacts.length; ++i) {	
+		var vrel = B.velocity.minus(A.velocity);
+		var proj = vrel.dot(n);
+
+		if (proj > 0) break;
 
 		var c = contacts[i];
 		var rA = contacts[i].minus(A.cm).dot(n);
@@ -249,14 +267,11 @@ function resolveCollision(A, B) {
 
 		var e = Math.min(A.e, B.e);
 		var j = -(1+e)*proj/(A.inverseMass + B.inverseMass + rA*rA*A.inverseMomentOfInertia + rB*rB*B.inverseMomentOfInertia);
-		if(proj < 0) {
-			A.applyImpulse(-j/contacts.length, n);
-			B.applyImpulse(j/contacts.length, n);
-			A.applyRotationalImpulse(-j/contacts.length, n, c);
-			B.applyRotationalImpulse(j/contacts.length, n, c);
-		}
-		applyFriction(A, B, n, j/contacts.length, c);
-		addTorque(A, B, c);
+		A.applyImpulse(-j, n);
+		B.applyImpulse(j, n);
+		A.applyRotationalImpulse(-j, n, c);
+		B.applyRotationalImpulse(j, n, c);
+		applyFriction(A, B, n, j);
 	}
 
 	positionalCorrection(A, B, n, depth);
