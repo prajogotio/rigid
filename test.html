@@ -12,6 +12,18 @@
 	function draw(b) {
 		g.beginPath();
 		g.strokeStyle = "black";
+		if (b instanceof Sphere) {
+			g.beginPath();
+			g.arc(b.cm.x, b.cm.y, b.radius, 0, 2*Math.PI);
+			g.stroke();
+
+			g.beginPath();
+			g.moveTo(b.cm.x, b.cm.y);
+			var end = b.cm.plus(b.getAbsoluteDirection(new Vec2(1,0)).times(b.radius));
+			g.lineTo(end.x, end.y);
+			g.stroke();
+			return;
+		}
 		g.moveTo(b.getAbsolutePosition(b.v[0]).x, b.getAbsolutePosition(b.v[0]).y);
 		for (var i = 1; i < b.v.length;++i) {
 			g.lineTo(b.getAbsolutePosition(b.v[i]).x, b.getAbsolutePosition(b.v[i]).y);
@@ -141,6 +153,7 @@
 	}
 
 	function testPlatform() {
+		var grav = new Vec2(0, 339.3);
 		var p = [];
 		p.push(new Body(new Vec2(canvas.width/2, 500),
 						[new Vec2(-400, 30), new Vec2(400, 30),
@@ -152,9 +165,9 @@
 			p.push(new Body(new Vec2(x, y),
 							[new Vec2(-width/2, width/2), new Vec2(width/2, width/2),
 							new Vec2(width/2, -width/2), new Vec2(-width/2, -width/2)],
-							mass, 0.7, mass*width*width/6,
+							mass, 0.7, mass*width*width,
 							null,
-							new Vec2(0, 77.8)));
+							grav));
 		}
 		function addTriangle(x, y) {
 			var a = 60;
@@ -165,15 +178,22 @@
 							new Vec2(-a/2*Math.sqrt(3), -a/2)],
 							mass, 0.7, mass*a*a,
 							null,
-							new Vec2(0, 22.8)));
+							grav));
 		}
-		var dt = 0.05;
+		function addSphere(x, y) {
+			var r = 50;
+			var mass = 70;
+			p.push(new Sphere(new Vec2(x,y), r, mass, 0.9, mass*r*r,
+					null, grav));
+		}
+		var dt = 1/60;
 		var ITERATION = 5;
 		var t = setInterval(function() {
 			g.clearRect(0,0,canvas.width,canvas.height);
 			for (var iter = 0; iter < ITERATION; ++iter) {
 				for (var i = 0; i < p.length; ++i) {
-					for (var j = i+1; j < p.length; ++j) {
+					for (var j = 0; j < p.length; ++j) {
+						if (i == j) continue;
 						if (p[i].collidesWith(p[j])) {
 							resolveCollisionExtended(p[i], p[j]);
 						}
@@ -191,7 +211,7 @@
 		addEventListener("keydown", function(e){ 
 			if (e.which == 32) {
 				clearInterval(t);
-				console.log(p);
+				window.RES = p;
 			}
 			key = e.which;
 		})
@@ -202,6 +222,8 @@
 				addRectangle(x, y);
 			} else if (key == 66) {
 				addTriangle(x, y);
+			} else if (key == 67) {
+				addSphere(x, y);
 			}
 		});
 	}

@@ -10,3 +10,4 @@ Clipping
 http://www.dyn4j.org/2011/11/contact-points-using-clipping/
 
 http://www.toptal.com/game/video-game-physics-part-iii-constrained-rigid-body-simulation
+http://www.randygaul.net/2013/03/27/game-physics-engine-part-1-impulse-resolution/
