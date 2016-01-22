@@ -268,7 +268,6 @@ function resolveCollision(A, B) {
 	// relative velocity of B as seen from A
 	var vrel = B.velocity.minus(A.velocity);
 	var proj = vrel.dot(n);
-	
 
 	// for (var i = 0; i < contacts.length; ++i) {	
 
@@ -288,15 +287,16 @@ function resolveCollision(A, B) {
 	// }
 	positionalCorrection(A, B, n, depth);
 	if (proj > 1e-9) return;
-	
+
 	for (var i = 0; i < contacts.length; ++i) {	
-		var vrel = B.velocity.minus(A.velocity);
-		var proj = vrel.dot(n);
-		if (proj > 1e-9) break;
+		// var vrel = B.velocity.minus(A.velocity);
+		// var proj = vrel.dot(n);
+		// if (proj > 1e-9) break;
 
 		var c = contacts[i];
 		var rA = contacts[i].minus(A.cm).dot(n);
 		var rB = contacts[i].minus(B.cm).dot(n);
+
 
 		var e = Math.min(A.e, B.e);
 		var j = -(1+e)*proj/(A.inverseMass + B.inverseMass + rA*rA*A.inverseMomentOfInertia + rB*rB*B.inverseMomentOfInertia);
