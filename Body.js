@@ -338,7 +338,7 @@ function resolveCollision(A, B) {
 		var rB = contacts[i].minus(B.cm).cross(n);
 
 
-		drawContactPoint(c);
+		//drawContactPoint(c);
 		var e = Math.min(A.e, B.e);
 		var j = -(1+e)*proj/(A.inverseMass + B.inverseMass + rA*rA*A.inverseMomentOfInertia + rB*rB*B.inverseMomentOfInertia);
 

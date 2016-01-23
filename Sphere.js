@@ -76,12 +76,16 @@ Sphere.prototype.axisOfLeastSeparationWith = function(b) {
 
 		var axis = b.getAbsoluteDirection(chosen);
 		var depth =  this.radius+lowest;
+		var impactAxis = this.cm.minus(contact).normalize();
+		if (!halfPlaneContains(contact, axis, this.cm)) {
+			impactAxis = impactAxis.flip();
+		}
 		return {
 			axis : axis,
 			depth : depth,
 			index: chosen,
 			contact: contact,
-			impactAxis : this.cm.minus(contact).normalize(),
+			impactAxis : impactAxis,
 		}
 	}
 }
