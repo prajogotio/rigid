@@ -18,14 +18,16 @@ function Sphere(cm, radius,
 	this.angularVelocity = angularVelocity || 0; // scalar radian
 	this.angularPosition = 0;	// radian
 
-	this.staticFriction = 0.3;
-	this.dynamicFriction = 0.1;
+	this.staticFriction = 0.1;
+	this.dynamicFriction = 0.0;
 
 	this.ANGULAR_DECAY = 0.90;
 }
 
 Sphere.prototype = Object.create(Body.prototype);
 Sphere.prototype.constructor = Sphere;
+
+Sphere.prototype.recomputeModel = function() {}
 
 Sphere.prototype.axisOfLeastSeparationWith = function(b) {
 	if (b instanceof Sphere) {
@@ -43,9 +45,9 @@ Sphere.prototype.axisOfLeastSeparationWith = function(b) {
 		var lowest = MAXIMUM_VALUE;
 		for (var i = 0; i < b.v.length; ++i) {
 			var j = (i+1)%b.v.length;
-			var u = b.getAbsolutePosition(b.v[i]);
-			var v = b.getAbsolutePosition(b.v[j]);
-			var n = b.getAbsoluteDirection(b.n[i]);
+			var u = b.getAbsolutePosition(i);
+			var v = b.getAbsolutePosition(j);
+			var n = b.getAbsoluteDirection(i);
 			var res = rayWithSegmentIntersection(this.cm, n, u, v);
 			var c;
 			if (res.t <= 0) {
@@ -63,7 +65,7 @@ Sphere.prototype.axisOfLeastSeparationWith = function(b) {
 			}
 		}
 
-		var axis = b.getAbsoluteDirection(b.n[chosen]);
+		var axis = b.getAbsoluteDirection(chosen);
 		var depth =  this.radius+lowest;
 		return {
 			axis : axis,
@@ -97,9 +99,9 @@ Sphere.prototype.collidesWith = function(b) {
 	} else {
 		for (var i = 0; i < b.v.length; ++i) {
 			var j = (i+1)%b.v.length;
-			var u = b.getAbsolutePosition(b.v[i]);
-			var v = b.getAbsolutePosition(b.v[j]);
-			var n = b.getAbsoluteDirection(b.n[i]);
+			var u = b.getAbsolutePosition(i);
+			var v = b.getAbsolutePosition(j);
+			var n = b.getAbsoluteDirection(i);
 			var res = rayWithSegmentIntersection(this.cm, n, u, v);
 			var c;
 			if (res.t <= 0) {

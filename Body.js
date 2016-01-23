@@ -26,17 +26,28 @@ function Body(cm, arrayOfVertices,
 	this.angularPosition = 0;	// radian
 
 	this.staticFriction = 0.3;
-	this.dynamicFriction = 0.1;
+	this.dynamicFriction = 0.22;
 
 	this.ANGULAR_DECAY = 0.98;
+
+	this.cachedV = this.v.slice(0);
+	this.cachedN = this.n.slice(0);
+	this.recomputeModel();
 }
 
-Body.prototype.getAbsolutePosition = function(v) {
-	return v.copy().rotate(this.angularPosition/Math.PI*180).plus(this.cm);
+Body.prototype.recomputeModel = function() {
+	for (var i = 0; i < this.v.length; ++i) {
+		this.cachedV[i] = this.v[i].copy().rotate(this.angularPosition/Math.PI*180).plus(this.cm);
+		this.cachedN[i] = this.n[i].copy().rotate(this.angularPosition/Math.PI*180);
+	}
 }
 
-Body.prototype.getAbsoluteDirection = function(n) {
-	return n.copy().rotate(this.angularPosition/Math.PI*180);
+Body.prototype.getAbsolutePosition = function(i) {
+	return this.cachedV[i];
+}
+
+Body.prototype.getAbsoluteDirection = function(i) {
+	return this.cachedN[i];
 }
 
 Body.prototype.axisOfLeastSeparationWith = function(b) {
@@ -52,7 +63,7 @@ Body.prototype.axisOfLeastSeparationWith = function(b) {
 	for (var i = 0; i < this.v.length; ++i) {
 		var curMaxLength = MINIMUM_LENGTH;
 		for (var j = 0; j < b.v.length; ++j) {
-			var cur = this.getAbsoluteDirection(this.n[i]).flip().dot(b.getAbsolutePosition(b.v[j]).minus(this.getAbsolutePosition(this.v[i])));
+			var cur = this.getAbsoluteDirection(i).flip().dot(b.getAbsolutePosition(j).minus(this.getAbsolutePosition(i)));
 			curMaxLength = Math.max(curMaxLength, cur);
 		}
 		if (curMaxLength < minLength) {
@@ -62,7 +73,7 @@ Body.prototype.axisOfLeastSeparationWith = function(b) {
 	}
 
 	// support point way
-	var axis = this.getAbsoluteDirection(this.n[chosen]);
+	var axis = this.getAbsoluteDirection(chosen);
 
 
 	return {
@@ -76,7 +87,7 @@ Body.prototype.getBestContactEdge = function(n) {
 	var chosen = 0;
 	var furthest = MINIMUM_DISTANCE;
 	for (var i = 0; i < this.v.length; ++i) {
-		var cur = this.getAbsolutePosition(this.v[i]).dot(n);
+		var cur = this.getAbsolutePosition(i).dot(n);
 		if (furthest < cur) {
 			furthest = cur;
 			chosen = i;
@@ -85,12 +96,12 @@ Body.prototype.getBestContactEdge = function(n) {
 	var prev = chosen-1;
 	var next = (chosen+1)%this.v.length;
 	if (prev < 0) prev += this.v.length;
-	var pval = Math.abs(n.dot(this.getAbsolutePosition(this.v[prev]).minus(this.getAbsolutePosition(this.v[chosen]))));
-	var nval = Math.abs(n.dot(this.getAbsolutePosition(this.v[chosen]).minus(this.getAbsolutePosition(this.v[next]))));
+	var pval = Math.abs(n.dot(this.getAbsolutePosition(prev).minus(this.getAbsolutePosition(chosen))));
+	var nval = Math.abs(n.dot(this.getAbsolutePosition(chosen).minus(this.getAbsolutePosition(next))));
 	// edge [vec2, vec2] preserves relative direction as in the convex polygon
 	// so that the function getNormal returns the correct normal
-	return (pval < nval ? [this.getAbsolutePosition(this.v[prev]), this.getAbsolutePosition(this.v[chosen])]
-						: [this.getAbsolutePosition(this.v[chosen]), this.getAbsolutePosition(this.v[next])]);
+	return (pval < nval ? [this.getAbsolutePosition(prev), this.getAbsolutePosition(chosen)]
+						: [this.getAbsolutePosition(chosen), this.getAbsolutePosition(next)]);
 }
 
 Body.prototype.collidesWith = function(b) {
@@ -99,12 +110,12 @@ Body.prototype.collidesWith = function(b) {
 	}
 	// separating axis theory
 	for (var i = 0; i < this.v.length; ++i) {
-		if (!checkProjectionsOverlap(this, b, this.getAbsoluteDirection(this.n[i]))) {
+		if (!checkProjectionsOverlap(this, b, this.getAbsoluteDirection(i))) {
 			return false;
 		}
 	}
 	for (var i = 0; i < b.v.length; ++i) {
-		if (!checkProjectionsOverlap(this, b, b.getAbsoluteDirection(b.n[i]))) {
+		if (!checkProjectionsOverlap(this, b, b.getAbsoluteDirection(i))) {
 			return false;
 		}
 	}
@@ -120,7 +131,10 @@ Body.prototype.integrate = function(dt) {
 	//this.angularVelocity += this.torque*this.inverseMomentOfInertia*dt;
 	this.angularVelocity *= this.ANGULAR_DECAY;
 	this.angularPosition += this.angularVelocity*dt;
+
+	this.recomputeModel();
 }
+
 
 Body.prototype.applyImpulse = function(j, n) {
 	// j is scalar amount of impulse
@@ -190,7 +204,7 @@ function checkProjectionsOverlap(A, B, n) {
 	n.normalize();
 
 	for (var i = 0; i < A.v.length; ++i) {
-		var cur = A.getAbsolutePosition(A.v[i]).dot(n);
+		var cur = A.getAbsolutePosition(i).dot(n);
 		Amin = Math.min(Amin, cur); 
 		Amax = Math.max(Amax, cur);
 	}
@@ -202,7 +216,7 @@ function checkProjectionsOverlap(A, B, n) {
 		Bmax = Math.max(begin, end);
 	} else {
 		for (var i = 0; i < B.v.length; ++i) {
-			var cur = B.getAbsolutePosition(B.v[i]).dot(n);
+			var cur = B.getAbsolutePosition(i).dot(n);
 			Bmin = Math.min(Bmin, cur);
 			Bmax = Math.max(Bmax, cur);
 		}
@@ -213,7 +227,7 @@ function checkProjectionsOverlap(A, B, n) {
 function applyFriction(A, B, n, j, c, vrel) {
 	// vrel is relative velocity of B seen from A
 	// A is the reference
-	// var vrel = B.velocity.minus(A.velocity);
+	var vrel = B.velocity.minus(A.velocity);
 
 	var tangent = vrel.minus(n.times(vrel.dot(n)));
 	tangent.normalize();

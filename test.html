@@ -19,14 +19,14 @@
 
 			g.beginPath();
 			g.moveTo(b.cm.x, b.cm.y);
-			var end = b.cm.plus(b.getAbsoluteDirection(new Vec2(1,0)).times(b.radius));
+			var end = b.cm.plus((new Vec2(1,0)).rotate(b.angularPosition/Math.PI*180).times(b.radius));
 			g.lineTo(end.x, end.y);
 			g.stroke();
 			return;
 		}
-		g.moveTo(b.getAbsolutePosition(b.v[0]).x, b.getAbsolutePosition(b.v[0]).y);
+		g.moveTo(b.getAbsolutePosition(0).x, b.getAbsolutePosition(0).y);
 		for (var i = 1; i < b.v.length;++i) {
-			g.lineTo(b.getAbsolutePosition(b.v[i]).x, b.getAbsolutePosition(b.v[i]).y);
+			g.lineTo(b.getAbsolutePosition(i).x, b.getAbsolutePosition(i).y);
 		}
 		g.closePath();
 		g.stroke();
@@ -180,14 +180,34 @@
 							null,
 							grav));
 		}
+		function addRamp(x, y) {
+			var h = 70;
+			var w = 300;
+			var mass = 520;
+			p.push(new Body(new Vec2(x,y),
+							[new Vec2(-w/3,-h/3), new Vec2(-w/3, 2*h/3), new Vec2(2*w/3,-h/3)],
+							mass, 0.3, mass*w*h/6,
+							null,
+							grav));
+		}
+		function addLongRect(x, y) {
+			var h = 70;
+			var w = 300;
+			var mass = 1000;
+			p.push(new Body(new Vec2(x,y),
+							[new Vec2(-w/2,-h/2), new Vec2(-w/2, h/2), new Vec2(w/2,h/2), new Vec2(w/2, -h/2)],
+							mass, 0.3, mass*w*h/6,
+							null,
+							grav));
+		}
 		function addSphere(x, y) {
 			var r = 20;
 			var mass = 70;
 			p.push(new Sphere(new Vec2(x,y), r, mass, 0.1, mass*r*r*2/5,
 					null, grav));
 		}
-		var dt = 1/30;
-		var ITERATION = 10;
+		var dt = 1/25;
+		var ITERATION = 50;
 		var t = setInterval(function() {
 			g.clearRect(0,0,canvas.width,canvas.height);
 			for (var iter = 0; iter < ITERATION; ++iter) {
@@ -224,6 +244,10 @@
 				addTriangle(x, y);
 			} else if (key == 67) {
 				addSphere(x, y);
+			} else if (key == 68) {
+				addRamp(x, y);
+			} else if (key == 69) {
+				addLongRect(x, y);
 			}
 		});
 	}
