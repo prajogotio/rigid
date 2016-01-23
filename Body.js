@@ -32,13 +32,23 @@ function Body(cm, arrayOfVertices,
 
 	this.cachedV = this.v.slice(0);
 	this.cachedN = this.n.slice(0);
+	this.boundingRectA = new Vec2(0,0);
+	this.boundingRectB = new Vec2(0,0);
+
 	this.recomputeModel();
 }
 
 Body.prototype.recomputeModel = function() {
+	this.boundingRectA.x = this.boundingRectA.y = 1e301;
+	this.boundingRectB.x = this.boundingRectB.y = -1e301;
 	for (var i = 0; i < this.v.length; ++i) {
 		this.cachedV[i] = this.v[i].copy().rotate(this.angularPosition/Math.PI*180).plus(this.cm);
 		this.cachedN[i] = this.n[i].copy().rotate(this.angularPosition/Math.PI*180);
+
+		this.boundingRectA.x = Math.min(this.boundingRectA.x, this.cachedV[i].x);
+		this.boundingRectA.y = Math.min(this.boundingRectA.y, this.cachedV[i].y);
+		this.boundingRectB.x = Math.max(this.boundingRectB.x, this.cachedV[i].x);
+		this.boundingRectB.y = Math.max(this.boundingRectB.y, this.cachedV[i].y);
 	}
 }
 
@@ -104,10 +114,17 @@ Body.prototype.getBestContactEdge = function(n) {
 						: [this.getAbsolutePosition(chosen), this.getAbsolutePosition(next)]);
 }
 
+Body.prototype.checkBoundingRect = function(b) {
+	return !(this.boundingRectB.x < b.boundingRectA.x || b.boundingRectB.x < this.boundingRectA.x
+		|| this.boundingRectB.y < b.boundingRectA.y || b.boundingRectB.y < this.boundingRectA.y);
+}
+
 Body.prototype.collidesWith = function(b) {
+
 	if (b instanceof Sphere) {
 		return b.collidesWith(this);
 	}
+	if (!this.checkBoundingRect(b)) return false;
 	// separating axis theory
 	for (var i = 0; i < this.v.length; ++i) {
 		if (!checkProjectionsOverlap(this, b, this.getAbsoluteDirection(i))) {

@@ -3,11 +3,13 @@
 	<script src="rigid.js"></script>
 </head>
 <body>
+	<div id="info"></div>
 	<canvas id="canvas" width="1000" height="600" >
 	</canvas>
 	<script>
 	var canvas = document.getElementById('canvas');
 	var g = canvas.getContext('2d');
+	var info = document.getElementById('info');
 	g.lineWidth = 3;
 	function draw(b) {
 		g.beginPath();
@@ -210,6 +212,7 @@
 		var ITERATION = 50;
 		var t = setInterval(function() {
 			g.clearRect(0,0,canvas.width,canvas.height);
+			var now = Date.now();
 			for (var iter = 0; iter < ITERATION; ++iter) {
 				for (var i = 0; i < p.length; ++i) {
 					for (var j = i+1; j < p.length; ++j) {
@@ -226,6 +229,9 @@
 			for (var i = 0; i < p.length; ++i) {
 				draw(p[i]);
 			}
+			var done = Date.now();
+			var t = (done-now);
+			info.innerHTML = t;
 		}, 1000/60);
 		var key = 65;
 		addEventListener("keydown", function(e){ 

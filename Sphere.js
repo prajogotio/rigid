@@ -22,12 +22,21 @@ function Sphere(cm, radius,
 	this.dynamicFriction = 0.0;
 
 	this.ANGULAR_DECAY = 0.90;
+
+	this.boundingRectB = new Vec2(this.cm.x+this.radius, this.cm.y+this.radius);
+	this.boundingRectA = new Vec2(this.cm.x-this.radius, this.cm.y-this.radius);
+	
 }
 
 Sphere.prototype = Object.create(Body.prototype);
 Sphere.prototype.constructor = Sphere;
 
-Sphere.prototype.recomputeModel = function() {}
+Sphere.prototype.recomputeModel = function() {
+	this.boundingRectB.x = this.cm.x+this.radius;
+	this.boundingRectB.y = this.cm.y+this.radius;
+	this.boundingRectA.x = this.cm.x-this.radius;
+	this.boundingRectA.y = this.cm.y-this.radius;
+}
 
 Sphere.prototype.axisOfLeastSeparationWith = function(b) {
 	if (b instanceof Sphere) {
@@ -94,6 +103,7 @@ Sphere.prototype.getContact = function(b) {
 }
 
 Sphere.prototype.collidesWith = function(b) {
+	if (!this.checkBoundingRect(b)) return false;
 	if (b instanceof Sphere) {
 		return this.cm.minus(b.cm).length() <= this.radius + b.radius;
 	} else {
