@@ -18,10 +18,10 @@ function Sphere(cm, radius,
 	this.angularVelocity = angularVelocity || 0; // scalar radian
 	this.angularPosition = 0;	// radian
 
-	this.staticFriction = 0.1;
-	this.dynamicFriction = 0.0;
+	this.staticFriction = 0.3;
+	this.dynamicFriction = 0.1;
 
-	this.ANGULAR_DECAY = 0.90;
+	this.ANGULAR_DECAY = 1;
 
 	this.boundingRectB = new Vec2(this.cm.x+this.radius, this.cm.y+this.radius);
 	this.boundingRectA = new Vec2(this.cm.x-this.radius, this.cm.y-this.radius);
@@ -132,3 +132,4 @@ Sphere.prototype.collidesWith = function(b) {
 		return false;
 	}
 }
+

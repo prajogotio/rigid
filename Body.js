@@ -28,7 +28,7 @@ function Body(cm, arrayOfVertices,
 	this.staticFriction = 0.3;
 	this.dynamicFriction = 0.22;
 
-	this.ANGULAR_DECAY = 0.98;
+	this.ANGULAR_DECAY = 1;
 
 	this.cachedV = this.v.slice(0);
 	this.cachedN = this.n.slice(0);
@@ -140,14 +140,20 @@ Body.prototype.collidesWith = function(b) {
 }
 
 Body.prototype.integrate = function(dt) {
-	// translational
-	this.velocity = this.velocity.plus(this.acceleration.times(dt));
-	this.cm = this.cm.plus(this.velocity.times(dt));
-
 	// rotational
 	//this.angularVelocity += this.torque*this.inverseMomentOfInertia*dt;
 	this.angularVelocity *= this.ANGULAR_DECAY;
+	if (this instanceof Sphere) {
+		var w = this.velocity.length()/this.radius;
+		if (Math.abs(this.angularVelocity) > w) {
+			this.angularVelocity = w * (this.angularVelocity < 0 ? -1 : 1);
+		}
+	}
 	this.angularPosition += this.angularVelocity*dt;
+
+	// translational
+	this.velocity = this.velocity.plus(this.acceleration.times(dt));
+	this.cm = this.cm.plus(this.velocity.times(dt));
 
 	this.recomputeModel();
 }
@@ -261,21 +267,21 @@ function applyFriction(A, B, n, j, c, vrel) {
 	
 	var frictionImpulse;
 	if (Math.abs(f) < j * us) {
-		frictionImpulse = tangent.times(f);
+		frictionImpulse = f;
 	} else {
 		// combined dynamic friction
 		var ud = Math.sqrt(A.dynamicFriction*A.dynamicFriction + B.dynamicFriction*B.dynamicFriction);
-		frictionImpulse = tangent.times(j * ud);
+		frictionImpulse = j * ud;
 	}
-	A.velocity = A.velocity.plus(frictionImpulse.times(A.inverseMass));
-	B.velocity = B.velocity.minus(frictionImpulse.times(B.inverseMass));
+	A.applyImpulse(frictionImpulse, tangent);
+	B.applyImpulse(-frictionImpulse, tangent);
 
-	A.angularVelocity -= A.inverseMomentOfInertia*(rA.cross(frictionImpulse));
-	B.angularVelocity -= B.inverseMomentOfInertia*(rB.cross(frictionImpulse));
+	A.applyRotationalImpulse(frictionImpulse, tangent, c);
+	B.applyRotationalImpulse(-frictionImpulse, tangent, c);
 }
 
 
-function resolveCollision(A, B) {
+function resolveCollisionRoutine(A, B) {
 	// A is the reference
 	// if A or B is polygon, swap such that A is polygon
 	if (A instanceof Sphere) {
@@ -324,18 +330,53 @@ function resolveCollision(A, B) {
 	// 	}
 	// 	applyFriction(A, B, n, j/contacts.length);
 	// }
-	positionalCorrection(A, B, n, depth);
 
+	positionalCorrection(A, B, n, depth);
 	if (proj > 0) return;
 
-	for (var i = 0; i < contacts.length; ++i) {	
-		//var vrel = B.velocity.minus(A.velocity);
-		//var proj = vrel.dot(n);
-		// if (proj > 1e-9) break;
+	resolveCollisionOnContacts_combine(contacts, n, A, B);
 
-		var c = contacts[i];
-		var rA = contacts[i].minus(A.cm).cross(n);
-		var rB = contacts[i].minus(B.cm).cross(n);
+}
+
+function resolveCollisionOnContacts_combine(contacts, n, A, B) {
+	var vrel = B.velocity.minus(A.velocity);
+	var proj = vrel.dot(n);
+
+	var c = contacts[0];
+	for (var i = 1; i < contacts.length; ++i) {
+		c = c.plus(contacts[i]);
+	}
+	c = c.times(1/contacts.length);
+
+	// var c = contacts[i];
+	var rA = c.minus(A.cm).cross(n);
+	var rB = c.minus(B.cm).cross(n);
+
+
+	//drawContactPoint(c);
+	var e = Math.min(A.e, B.e);
+	var j = -(1+e)*proj/(A.inverseMass + B.inverseMass + rA*rA*A.inverseMomentOfInertia + rB*rB*B.inverseMomentOfInertia);
+
+	A.applyImpulse(-j, n);
+	B.applyImpulse(j, n);
+	A.applyRotationalImpulse(-j, n, c);
+	B.applyRotationalImpulse(j, n, c);
+	applyFriction(A, B, n, j, c, vrel);
+}
+
+
+function resolveCollisionOnContacts_seperate(contacts, n, A, B) {
+	var vrel = B.velocity.minus(A.velocity);
+	var proj = vrel.dot(n);
+	
+	for (var i = 0; i < contacts.length; ++i) {	
+		// var vrel = B.velocity.minus(A.velocity);
+		// var proj = vrel.dot(n);
+		// if (proj > 0) break;
+
+		// var c = contacts[i];
+		var rA = c.minus(A.cm).cross(n);
+		var rB = c.minus(B.cm).cross(n);
 
 
 		//drawContactPoint(c);
@@ -348,7 +389,6 @@ function resolveCollision(A, B) {
 		B.applyRotationalImpulse(j, n, c);
 		applyFriction(A, B, n, j, c, vrel);
 	}	
-
 }
 
 function positionalCorrection(A, B, n, depth) {
@@ -362,13 +402,13 @@ function positionalCorrection(A, B, n, depth) {
 
 }
 
-function resolveCollisionExtended(A, B) {
+function resolveCollision(A, B) {
 	var resA = A.axisOfLeastSeparationWith(B);
 	var resB = B.axisOfLeastSeparationWith(A);
 	if (resA.depth < resB.depth) {
-		resolveCollision(A, B);
+		resolveCollisionRoutine(A, B);
 	} else {
-	 	resolveCollision(B, A);
+	 	resolveCollisionRoutine(B, A);
 	}
 }
 

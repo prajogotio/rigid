@@ -64,93 +64,38 @@
 		g.fillRect(0,0,8,8);
 	}
 
-	function test() {
-		var A = new Body(new Vec2(30, 30), [new Vec2(-50,-50),
-					  new Vec2(-50,50),
-					  new Vec2(50,50),
-					  new Vec2(50,-50)],
-					  35,
-					  0.5,
-					  100,
-					  new Vec2(1, 2),
-					  null,
-					  0.3);
-		var B = new Body(new Vec2(230, 230), [new Vec2(0,70),
-					  new Vec2(100,0),
-					  new Vec2(-44,0)],
-					  40,
-					  0.8,
-					  100,
-					  new Vec2(0, 0));
-		var t = setInterval(function() {
-			g.clearRect(0,0,canvas,600);
-			draw(A);
-			draw(B);
-			var n = A.axisOfLeastSeparationWith(B).axis;
-			
-			if (A.collidesWith(B)) {
-				drawCollision();
-			}
-
-			drawDirection(n);
-
-			var ref = A.getBestContactEdge(n);
-			var inc = B.getBestContactEdge(n.flip());
-
-			drawEdge(ref);
-			drawEdge(inc);
-
-			var contacts = getContactPoints(ref, inc);
-			for (var i = 0; i < contacts.length; ++i) {
-				drawContactPoint(contacts[i]);
-			}
-		}, 1000/60);
-		addEventListener("keydown", function(e){
-			if (e.which == 13) {
-				clearInterval(t);
-			} else if (e.which == 38) {
-				A.cm.y -= 5;
-			} else if (e.which == 40) {
-				A.cm.y += 5;
-			} else if (e.which == 37) {
-				A.cm.x -= 5;
-			} else if (e.which == 39) {
-				A.cm.x += 5;
-			}
-		});
-	}
-
+	
 	function testCollision() {
 		var A = new Body(new Vec2(30, 30), [new Vec2(-50,-50),
 					  new Vec2(-50,50),
 					  new Vec2(50,50),
 					  new Vec2(50,-50)],
-					  35,
-					  0.5,
-					  100,
-					  new Vec2(1, 2),
+					  40, 0.5, 10000,
+					  new Vec2(1.5, 2),
 					  null,
-					  Math.PI/1200);
-		var B = new Body(new Vec2(230, 230), [new Vec2(0,70),
-					  new Vec2(100,0),
-					  new Vec2(-44,0)],
-					  40,
-					  0.8,
-					  100,
+					  Math.PI/120);
+		var B = new Body(new Vec2(230, 230), [
+					  new Vec2(0,45),
+					  new Vec2(100,-25),
+					  new Vec2(-44,-25)],
+					  1300, 0.8, 10000,
 					  new Vec2(0, 0),
 					  null,
-					  Math.PI/1300);
+					  null);
+		var dt = 1;
 		var t = setInterval(function() {
-			g.clearRect(0,0,600,600);
-			if (A.collidesWith(B)) {
-				drawCollision();
-				resolveCollision(A, B);
+			g.clearRect(0,0,canvas.width,canvas.height);
+			for (var iter = 0; iter < 50; ++iter){
+				if (A.collidesWith(B)) {
+					drawCollision();
+					resolveCollision(A, B);
+				}
+				A.integrate(dt/50);
+				B.integrate(dt/50);
 			}
-			A.integrate(0.1);
-			B.integrate(0.1);
 			draw(A);
 			draw(B);
-		});
+		}, 1000/60);
 		addEventListener("keydown", function(){ clearInterval(t); })
 	}
 
@@ -167,7 +112,7 @@
 			p.push(new Body(new Vec2(x, y),
 							[new Vec2(-width/2, width/2), new Vec2(width/2, width/2),
 							new Vec2(width/2, -width/2), new Vec2(-width/2, -width/2)],
-							mass, 0.3, mass*width*width/6,
+							mass, 0.3, mass*width*width,
 							null,
 							grav));
 		}
@@ -188,7 +133,7 @@
 			var mass = 520;
 			p.push(new Body(new Vec2(x,y),
 							[new Vec2(-w/3,-h/3), new Vec2(-w/3, 2*h/3), new Vec2(2*w/3,-h/3)],
-							mass, 0.3, mass*w*h/6,
+							mass, 0.9, mass*w*h/6,
 							null,
 							grav));
 		}
@@ -205,7 +150,7 @@
 		function addSphere(x, y) {
 			var r = 20;
 			var mass = 70;
-			p.push(new Sphere(new Vec2(x,y), r, mass, 0.1, mass*r*r*2/5,
+			p.push(new Sphere(new Vec2(x,y), r, mass, 0.8, mass*r*r*2/5,
 					null, grav));
 		}
 		var dt = 1/25;
@@ -213,12 +158,15 @@
 		var t = setInterval(function() {
 			g.clearRect(0,0,canvas.width,canvas.height);
 			var now = Date.now();
-			for (var iter = 0; iter < ITERATION; ++iter) {
+			for (var i = 0; i < p.length; ++i) {
+				p[i].integrate(dt/ITERATION);
+			}
+			for (var iter = 0; iter < ITERATION-1; ++iter) {
 				for (var i = 0; i < p.length; ++i) {
 					for (var j = i+1; j < p.length; ++j) {
 						if (i == j) continue;
 						if (p[i].collidesWith(p[j])) {
-							resolveCollisionExtended(p[i], p[j]);
+							resolveCollision(p[i], p[j]);
 						}
 					}
 				}
