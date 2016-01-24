@@ -28,14 +28,20 @@ function Body(cm, arrayOfVertices,
 	this.staticFriction = 0.3;
 	this.dynamicFriction = 0.12;
 
-	this.ANGULAR_DECAY = 0.999;
+	this.ANGULAR_DECAY = 1;
 
 	this.cachedV = this.v.slice(0);
 	this.cachedN = this.n.slice(0);
 	this.boundingRectA = new Vec2(0,0);
 	this.boundingRectB = new Vec2(0,0);
 
+
 	this.recomputeModel();
+}
+
+Body.prototype.applyAcceleration = function(a) {
+	this.acceleration.x = a.x;
+	this.acceleration.y = a.y;
 }
 
 Body.prototype.recomputeModel = function() {
@@ -251,7 +257,7 @@ function checkProjectionsOverlap(A, B, n) {
 function applyFriction(A, B, n, j, c, vrel) {
 	// vrel is relative velocity of B seen from A
 	// A is the reference
-	var vrel = B.velocity.minus(A.velocity);
+	var vrel = computeRelativeVelocity(A, B, c);
 
 	var tangent = vrel.minus(n.times(vrel.dot(n)));
 	tangent.normalize();
@@ -274,6 +280,7 @@ function applyFriction(A, B, n, j, c, vrel) {
 		var ud = Math.sqrt(A.dynamicFriction*A.dynamicFriction + B.dynamicFriction*B.dynamicFriction);
 		frictionImpulse = j * ud;
 	}
+
 	A.applyImpulse(frictionImpulse, tangent);
 	B.applyImpulse(-frictionImpulse, tangent);
 
@@ -312,19 +319,13 @@ function resolveCollisionRoutine(A, B) {
 
 
 	// relative velocity of B as seen from A
-	var vrel = B.velocity.minus(A.velocity);
-	var proj = vrel.dot(n);
 
 	positionalCorrection(A, B, n, depth);
-	if (proj > 0) return;
-
 	resolveCollisionOnContacts_combine(contacts, n, A, B);
-
 }
 
 function resolveCollisionOnContacts_combine(contacts, n, A, B) {
-	var vrel = B.velocity.minus(A.velocity);
-	var proj = vrel.dot(n);
+
 
 	var c = contacts[0];
 	for (var i = 1; i < contacts.length; ++i) {
@@ -332,7 +333,11 @@ function resolveCollisionOnContacts_combine(contacts, n, A, B) {
 	}
 	c = c.times(1/contacts.length);
 
-	// var c = contacts[i];
+	var vrel = computeRelativeVelocity(A, B, c);
+	var proj = vrel.dot(n);
+
+	if (proj > 0) return;
+
 	var rA = c.minus(A.cm).cross(n);
 	var rB = c.minus(B.cm).cross(n);
 
@@ -349,14 +354,11 @@ function resolveCollisionOnContacts_combine(contacts, n, A, B) {
 }
 
 
-function resolveCollisionOnContacts_seperate(contacts, n, A, B) {
-	var vrel = B.velocity.minus(A.velocity);
-	var proj = vrel.dot(n);
-	
+function resolveCollisionOnContacts_seperate(contacts, n, A, B) {	
 	for (var i = 0; i < contacts.length; ++i) {	
-		// var vrel = B.velocity.minus(A.velocity);
-		// var proj = vrel.dot(n);
-		// if (proj > 0) break;
+		var vrel = computeRelativeVelocity(A, B, contacts[i]);
+		var proj = vrel.dot(n);
+		if (proj > 0) break;
 
 		// var c = contacts[i];
 		var rA = c.minus(A.cm).cross(n);
@@ -366,7 +368,6 @@ function resolveCollisionOnContacts_seperate(contacts, n, A, B) {
 		//drawContactPoint(c);
 		var e = Math.min(A.e, B.e);
 		var j = -(1+e)*proj/(A.inverseMass + B.inverseMass + rA*rA*A.inverseMomentOfInertia + rB*rB*B.inverseMomentOfInertia);
-
 		A.applyImpulse(-j, n);
 		B.applyImpulse(j, n);
 		A.applyRotationalImpulse(-j, n, c);
@@ -397,3 +398,12 @@ function resolveCollision(A, B) {
 	}
 }
 
+function getAngularComponent(A, c) {
+	var r = c.minus(A.cm);
+	return new Vec2(-A.angularVelocity * r.y, A.angularVelocity * r.x);
+}
+
+function computeRelativeVelocity(A, B, c) {
+	// velocity of B relative to A, at contact point c
+	return B.velocity.plus(getAngularComponent(B,c)).minus(A.velocity).minus(getAngularComponent(A, c));
+}

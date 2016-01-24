@@ -11,9 +11,10 @@
 	var g = canvas.getContext('2d');
 	var info = document.getElementById('info');
 	g.lineWidth = 3;
-	function draw(b) {
+	function draw(b, color, fill) {
 		g.beginPath();
-		g.strokeStyle = "black";
+		g.strokeStyle = color|| "black";
+		g.fillStyle = color || "black";
 		if (b instanceof Sphere) {
 			g.beginPath();
 			g.arc(b.cm.x, b.cm.y, b.radius, 0, 2*Math.PI);
@@ -23,6 +24,7 @@
 			g.moveTo(b.cm.x, b.cm.y);
 			var end = b.cm.plus((new Vec2(1,0)).rotate(b.angularPosition/Math.PI*180).times(b.radius));
 			g.lineTo(end.x, end.y);
+			g.closePath();
 			g.stroke();
 			return;
 		}
@@ -31,12 +33,15 @@
 			g.lineTo(b.getAbsolutePosition(i).x, b.getAbsolutePosition(i).y);
 		}
 		g.closePath();
+		if (fill) {
+			g.fill();
+		}
 		g.stroke();
 	}
 
-	function drawDirection(n) {
+	function drawDirection(n, color) {
 		g.save();
-		g.strokeStyle = "red"
+		g.strokeStyle = color || "red";
 		g.translate(300, 300);
 		g.fillRect(0,0,4,4);
 		g.beginPath();
@@ -106,15 +111,26 @@
 						[new Vec2(-400, 30), new Vec2(400, 30),
 						new Vec2(400, -30), new Vec2(-400, -30)],
 						0, 1, 0));
+		p.push(new Body(new Vec2(50, 300),
+						[new Vec2(-40, 300), new Vec2(40, 300),
+						new Vec2(40, -300), new Vec2(-40, -300)],
+						0, 1, 0));
+		p.push(new Body(new Vec2(canvas.width-50, 300),
+						[new Vec2(-40, 300), new Vec2(40, 300),
+						new Vec2(40, -300), new Vec2(-40, -300)],
+						0, 1, 0));
 		function addRectangle(x, y) {
 			var width = 30;
 			var mass = 100;
 			p.push(new Body(new Vec2(x, y),
 							[new Vec2(-width/2, width/2), new Vec2(width/2, width/2),
 							new Vec2(width/2, -width/2), new Vec2(-width/2, -width/2)],
-							mass, 0.3, mass*width*width*2,
+							mass, 0.3, mass*width*width,
 							null,
-							grav));
+							null));
+			if (p.length > 4) {
+				p[p.length-1].marked = true;
+			}
 		}
 		function addTriangle(x, y) {
 			var a = 20;
@@ -125,7 +141,7 @@
 							new Vec2(-a/2*Math.sqrt(3), -a/2)],
 							mass, 0.1, mass*a*a/6,
 							null,
-							grav));
+							null));
 		}
 		function addRamp(x, y) {
 			var h = 70;
@@ -135,7 +151,7 @@
 							[new Vec2(-w/3,-h/3), new Vec2(-w/3, 2*h/3), new Vec2(2*w/3,-h/3)],
 							mass, 0.9, mass*w*h/6,
 							null,
-							grav));
+							null));
 		}
 		function addLongRect(x, y) {
 			var h = 70;
@@ -143,9 +159,9 @@
 			var mass = 1000;
 			p.push(new Body(new Vec2(x,y),
 							[new Vec2(-w/2,-h/2), new Vec2(-w/2, h/2), new Vec2(w/2,h/2), new Vec2(w/2, -h/2)],
-							mass, 0.3, mass*w*h*5,
+							mass, 0.3, mass*w*h,
 							null,
-							grav));
+							null));
 		}
 		function addSphere(x, y) {
 			var r = 20;
@@ -159,9 +175,17 @@
 			g.clearRect(0,0,canvas.width,canvas.height);
 			var now = Date.now();
 			for (var i = 0; i < p.length; ++i) {
+				if (p[i].mass == 0) continue;
+				p[i].applyAcceleration(grav);
+			}
+			for (var i = 0; i < p.length; ++i) {
 				p[i].integrate(dt/ITERATION);
 			}
 			for (var iter = 0; iter < ITERATION-1; ++iter) {
+				for (var i = 0; i < p.length; ++i) {
+					if (p[i].mass == 0) continue;
+					p[i].applyAcceleration(grav);
+				}
 				for (var i = 0; i < p.length; ++i) {
 					for (var j = i+1; j < p.length; ++j) {
 						if (i == j) continue;
