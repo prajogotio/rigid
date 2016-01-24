@@ -25,7 +25,6 @@ function Body(cm, arrayOfVertices,
 	this.angularVelocity = angularVelocity || 0; // scalar radian
 	this.angularPosition = 0;	// radian
 
-	this.staticFriction = 0.3;
 	this.dynamicFriction = 0.12;
 
 	this.ANGULAR_DECAY = 1;
@@ -68,7 +67,9 @@ Body.prototype.getAbsoluteDirection = function(i) {
 
 Body.prototype.axisOfLeastSeparationWith = function(b) {
 	if (b instanceof Sphere) {
-		return b.axisOfLeastSeparationWith(this);
+		var res = b.axisOfLeastSeparationWith(this);
+		res.axis = res.axis.flip();
+		return res;
 	}
 
 	// b is another Polygon
@@ -182,6 +183,22 @@ Body.prototype.applyRotationalImpulse = function(j, n, c) {
 	this.angularVelocity += dv;
 }
 
+Body.prototype.getContact = function(B) {
+	if (B instanceof Sphere) {
+		return B.getContact(this);
+	}
+	var res = this.axisOfLeastSeparationWith(B);
+	var n = res.axis;
+	var depth = res.depth;
+
+	var contacts = [];
+	// getting contact of incident B
+	var ref = this.getBestContactEdge(n);
+	var inc = B.getBestContactEdge(n.flip());
+	contacts = getContactPoints(ref, inc);
+	return contacts;
+}
+
 
 function getContactPoints(ref, inc) {
 	// ref reference edge,
@@ -267,55 +284,29 @@ function applyFriction(A, B, n, j, c, vrel) {
 	var rB = c.minus(B.cm);
 
 
-	var f = vrel.dot(tangent) / (A.inverseMass + B.inverseMass + A.inverseMomentOfInertia*Math.pow(rA.cross(tangent), 2) + B.inverseMomentOfInertia*Math.pow(rB.cross(tangent), 2));
-	
-	// combined static friction
-	var us = Math.sqrt(A.staticFriction*A.staticFriction+B.staticFriction*B.staticFriction);
-	
-	var frictionImpulse;
-	if (Math.abs(f) < j * us) {
-		frictionImpulse = f;
-	} else {
-		// combined dynamic friction
-		var ud = Math.sqrt(A.dynamicFriction*A.dynamicFriction + B.dynamicFriction*B.dynamicFriction);
-		frictionImpulse = j * ud;
-	}
+	var f = -vrel.dot(tangent) / (A.inverseMass + B.inverseMass + A.inverseMomentOfInertia*Math.pow(rA.cross(tangent), 2) + B.inverseMomentOfInertia*Math.pow(rB.cross(tangent), 2));
 
-	A.applyImpulse(frictionImpulse, tangent);
-	B.applyImpulse(-frictionImpulse, tangent);
+	var ud = Math.sqrt(A.dynamicFriction*A.dynamicFriction + B.dynamicFriction*B.dynamicFriction);
+	frictionImpulse = Math.min(Math.max(f, -j*ud), j*ud);
 
-	A.applyRotationalImpulse(frictionImpulse, tangent, c);
-	B.applyRotationalImpulse(-frictionImpulse, tangent, c);
+	A.applyImpulse(-frictionImpulse, tangent);
+	B.applyImpulse(frictionImpulse, tangent);
+
+	A.applyRotationalImpulse(-frictionImpulse, tangent, c);
+	B.applyRotationalImpulse(frictionImpulse, tangent, c);
 }
 
 
 function resolveCollisionRoutine(A, B) {
 	// A is the reference
-	// if A or B is polygon, swap such that A is polygon
-	if (A instanceof Sphere) {
-		var C = A;
-		A = B;
-		B = C;
-	}
+	// c is the array of contact points, null if not given
 
 	// choose a normal from A
 	// n must point out of A
 	var res = A.axisOfLeastSeparationWith(B);
 	var n = res.axis;
 	var depth = res.depth;
-
-	var contacts = [];
-	if (!(A instanceof Sphere) && !(B instanceof Sphere)) {
-		// getting contact of incident B
-		var ref = A.getBestContactEdge(n);
-		var inc = B.getBestContactEdge(n.flip());
-		contacts = getContactPoints(ref, inc);
-	} else {
-		contacts = B.getContact(A);
-		if (!(A instanceof Sphere)) {
-			n = res.impactAxis;
-		}
-	}
+	var contacts = A.getContact(B);
 
 
 	// relative velocity of B as seen from A
@@ -326,8 +317,10 @@ function resolveCollisionRoutine(A, B) {
 
 function resolveCollisionOnContacts_combine(contacts, n, A, B) {
 
+	if (contacts.length == 0) return;
 
 	var c = contacts[0];
+	
 	for (var i = 1; i < contacts.length; ++i) {
 		c = c.plus(contacts[i]);
 	}
@@ -336,8 +329,6 @@ function resolveCollisionOnContacts_combine(contacts, n, A, B) {
 	var vrel = computeRelativeVelocity(A, B, c);
 	var proj = vrel.dot(n);
 
-	if (proj > 0) return;
-
 	var rA = c.minus(A.cm).cross(n);
 	var rB = c.minus(B.cm).cross(n);
 
@@ -345,7 +336,7 @@ function resolveCollisionOnContacts_combine(contacts, n, A, B) {
 	//drawContactPoint(c);
 	var e = Math.min(A.e, B.e);
 	var j = -(1+e)*proj/(A.inverseMass + B.inverseMass + rA*rA*A.inverseMomentOfInertia + rB*rB*B.inverseMomentOfInertia);
-
+	j = Math.max(j, 0);
 	A.applyImpulse(-j, n);
 	B.applyImpulse(j, n);
 	A.applyRotationalImpulse(-j, n, c);
@@ -379,7 +370,6 @@ function resolveCollisionOnContacts_seperate(contacts, n, A, B) {
 function positionalCorrection(A, B, n, depth) {
 	// A is the reference body
 	// n points out of A
-
 	var CORRECTION_RATE = 1;
 	var correction = CORRECTION_RATE * depth/(A.inverseMass + B.inverseMass);
 	// if (Math.abs(n.x*correction)<2) n.x = 0;
@@ -391,11 +381,12 @@ function positionalCorrection(A, B, n, depth) {
 function resolveCollision(A, B) {
 	var resA = A.axisOfLeastSeparationWith(B);
 	var resB = B.axisOfLeastSeparationWith(A);
-	if (resA.depth < resB.depth) {
-		resolveCollisionRoutine(A, B);
-	} else {
-	 	resolveCollisionRoutine(B, A);
+	if (resA.depth > resB.depth) {
+		var C = A;
+		A = B;
+		B = C;
 	}
+	resolveCollisionRoutine(A, B);
 }
 
 function getAngularComponent(A, c) {

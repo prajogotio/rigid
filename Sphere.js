@@ -78,17 +78,16 @@ Sphere.prototype.axisOfLeastSeparationWith = function(b) {
 
 		var depth =  this.radius+lowest;
 
-		var impactAxis = this.cm.minus(contact).normalize();
+		var impactAxis = contact.minus(this.cm).normalize();
 		if (lowest > 0) {
 			impactAxis = impactAxis.flip();
 		}
 
 		return {
-			axis : axis,
+			axis : impactAxis,
 			depth : depth,
 			index: chosen,
 			contact: contact,
-			impactAxis : impactAxis,
 		}
 	}
 }

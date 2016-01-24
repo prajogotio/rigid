@@ -169,23 +169,40 @@
 			p.push(new Sphere(new Vec2(x,y), r, mass, 0.8, mass*r*r*2/5,
 					null, grav));
 		}
+
+		function verticalSort(p) {
+			for (var i = 0; i < p.length; ++i) {
+				for (var j = i-1; j > 0; --j) {
+					if (p[j].cm.y > p[j-1].cm.x) {
+						var temp = p[j];
+						p[j] = p[j-1];
+						p[j-1] = temp;
+					} else {
+						break;
+					}
+				}
+			}
+		}
 		var dt = 1/30;
-		var ITERATION = 20;
+		var ITERATION = 10;
 		var t = setInterval(function() {
 			g.clearRect(0,0,canvas.width,canvas.height);
 			var now = Date.now();
-			for (var i = 0; i < p.length; ++i) {
-				if (p[i].mass == 0) continue;
-				p[i].applyAcceleration(grav);
-			}
-			for (var i = 0; i < p.length; ++i) {
-				p[i].integrate(dt/ITERATION);
-			}
-			for (var iter = 0; iter < ITERATION-1; ++iter) {
+			// for (var i = 0; i < p.length; ++i) {
+			// 	if (p[i].mass == 0) continue;
+			// 	p[i].applyAcceleration(grav);
+			// }
+			// for (var i = 0; i < p.length; ++i) {
+			// 	p[i].integrate(dt/ITERATION);
+			// }
+
+			// WAY 1
+			for (var iter = 0; iter < ITERATION; ++iter) {
 				for (var i = 0; i < p.length; ++i) {
 					if (p[i].mass == 0) continue;
 					p[i].applyAcceleration(grav);
 				}
+				//verticalSort(p);
 				for (var i = 0; i < p.length; ++i) {
 					for (var j = i+1; j < p.length; ++j) {
 						if (i == j) continue;
@@ -198,6 +215,31 @@
 					p[i].integrate(dt/ITERATION);
 				}
 			}
+
+			// WAY 2
+			// var manifolds = [];
+			// for (var i = 0; i < p.length; ++i) {
+			// 	for (var j = i+1; j < p.length; ++j) {
+			// 		if (i == j) continue;
+			// 		if (p[i].collidesWith(p[j])) {
+			// 			manifolds = manifolds.concat(getManifolds(p[i], p[j]));
+			// 		}
+			// 	}
+			// }
+			// for (var iter = 0; iter < ITERATION; ++iter) {
+				
+			// 	for (var i = 0; i < p.length; ++i) {
+			// 		if (p[i].mass == 0) continue;
+			// 		p[i].applyAcceleration(grav);
+			// 	}
+			// 	for (var i = 0; i < manifolds.length; ++i) {
+			// 		resolveManifold(manifolds[i]);
+			// 	}
+				
+			// 	for (var i = 0; i < p.length; ++i) {
+			// 		p[i].integrate(dt/ITERATION);
+			// 	}
+			// }
 
 			for (var i = 0; i < p.length; ++i) {
 				draw(p[i]);

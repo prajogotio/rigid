@@ -13,7 +13,7 @@ function include(src, state) {
 
 function includeAllScripts() {
 	var state = {
-		src : ['Vec2.js', 'Body.js', 'Sphere.js'],
+		src : ['Vec2.js', 'Body.js', 'Sphere.js', 'Manifold.js'],
 		includes : 0,
 		run : function() {
 			testPlatform();
