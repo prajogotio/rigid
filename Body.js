@@ -28,7 +28,7 @@ function Body(cm, arrayOfVertices,
 	this.staticFriction = 0.3;
 	this.dynamicFriction = 0.22;
 
-	this.ANGULAR_DECAY = 1;
+	this.ANGULAR_DECAY = 0.999;
 
 	this.cachedV = this.v.slice(0);
 	this.cachedN = this.n.slice(0);
@@ -154,6 +154,7 @@ Body.prototype.integrate = function(dt) {
 	// translational
 	this.velocity = this.velocity.plus(this.acceleration.times(dt));
 	this.cm = this.cm.plus(this.velocity.times(dt));
+
 
 	this.recomputeModel();
 }
@@ -313,23 +314,6 @@ function resolveCollisionRoutine(A, B) {
 	// relative velocity of B as seen from A
 	var vrel = B.velocity.minus(A.velocity);
 	var proj = vrel.dot(n);
-
-	// for (var i = 0; i < contacts.length; ++i) {	
-
-	// 	var c = contacts[i];
-	// 	var rA = contacts[i].minus(A.cm).dot(n);
-	// 	var rB = contacts[i].minus(B.cm).dot(n);
-
-	// 	var e = Math.min(A.e, B.e);
-	// 	var j = -(1+e)*proj/(A.inverseMass + B.inverseMass + rA*rA*A.inverseMomentOfInertia + rB*rB*B.inverseMomentOfInertia);
-	// 	if(proj < 0) {
-	// 		A.applyImpulse(-j/contacts.length, n);
-	// 		B.applyImpulse(j/contacts.length, n);
-	// 		A.applyRotationalImpulse(-j/contacts.length, n, c);
-	// 		B.applyRotationalImpulse(j/contacts.length, n, c);
-	// 	}
-	// 	applyFriction(A, B, n, j/contacts.length);
-	// }
 
 	positionalCorrection(A, B, n, depth);
 	if (proj > 0) return;

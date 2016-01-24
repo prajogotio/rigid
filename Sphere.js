@@ -99,6 +99,9 @@ Sphere.prototype.getContact = function(b) {
 		// s t, s+t = d
 		// s = (R^2-r^2+d^2)/2d
 		var length = this.cm.minus(b.cm).length();
+		if (length == 0) {
+			return this.cm;
+		}
 		var s = (this.radius*this.radius-b.radius*b.radius+length*length)/(2*length);
 		return [this.cm.plus(n.times(s))];
 	} else {

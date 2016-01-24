@@ -112,7 +112,7 @@
 			p.push(new Body(new Vec2(x, y),
 							[new Vec2(-width/2, width/2), new Vec2(width/2, width/2),
 							new Vec2(width/2, -width/2), new Vec2(-width/2, -width/2)],
-							mass, 0.3, mass*width*width,
+							mass, 0.3, mass*width*width*2,
 							null,
 							grav));
 		}
@@ -143,7 +143,7 @@
 			var mass = 1000;
 			p.push(new Body(new Vec2(x,y),
 							[new Vec2(-w/2,-h/2), new Vec2(-w/2, h/2), new Vec2(w/2,h/2), new Vec2(w/2, -h/2)],
-							mass, 0.3, mass*w*h/6,
+							mass, 0.3, mass*w*h*5,
 							null,
 							grav));
 		}
@@ -154,7 +154,7 @@
 					null, grav));
 		}
 		var dt = 1/25;
-		var ITERATION = 50;
+		var ITERATION = 10;
 		var t = setInterval(function() {
 			g.clearRect(0,0,canvas.width,canvas.height);
 			var now = Date.now();
