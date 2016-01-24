@@ -26,7 +26,7 @@ function Body(cm, arrayOfVertices,
 	this.angularPosition = 0;	// radian
 
 	this.staticFriction = 0.3;
-	this.dynamicFriction = 0.22;
+	this.dynamicFriction = 0.12;
 
 	this.ANGULAR_DECAY = 0.999;
 
@@ -378,6 +378,7 @@ function resolveCollisionOnContacts_seperate(contacts, n, A, B) {
 function positionalCorrection(A, B, n, depth) {
 	// A is the reference body
 	// n points out of A
+
 	var CORRECTION_RATE = 1;
 	var correction = CORRECTION_RATE * depth/(A.inverseMass + B.inverseMass);
 	// if (Math.abs(n.x*correction)<2) n.x = 0;

@@ -66,7 +66,7 @@ Sphere.prototype.axisOfLeastSeparationWith = function(b) {
 			} else {
 				c = res.intersect;
 			}
-			var dist = c.minus(this.cm).length()*(halfPlaneContains(c, n, this.cm) ? -1 : 1);
+			var dist = c.minus(this.cm).dot(n);
 			if (dist < lowest) {
 				contact = c;
 				lowest = dist;
@@ -75,11 +75,14 @@ Sphere.prototype.axisOfLeastSeparationWith = function(b) {
 		}
 
 		var axis = b.getAbsoluteDirection(chosen);
+
 		var depth =  this.radius+lowest;
+
 		var impactAxis = this.cm.minus(contact).normalize();
-		if (!halfPlaneContains(contact, axis, this.cm)) {
+		if (lowest > 0) {
 			impactAxis = impactAxis.flip();
 		}
+
 		return {
 			axis : axis,
 			depth : depth,
@@ -114,6 +117,7 @@ Sphere.prototype.collidesWith = function(b) {
 	if (b instanceof Sphere) {
 		return this.cm.minus(b.cm).length() <= this.radius + b.radius;
 	} else {
+		var inside = true;
 		for (var i = 0; i < b.v.length; ++i) {
 			var j = (i+1)%b.v.length;
 			var u = b.getAbsolutePosition(i);
@@ -131,8 +135,11 @@ Sphere.prototype.collidesWith = function(b) {
 			if (c.minus(this.cm).length() <= this.radius) {
 				return true;
 			}
+			if (inside && halfPlaneContains(c, n, this.cm)) {
+				inside = false;
+			}
 		}
-		return false;
+		return inside;
 	}
 }
 
