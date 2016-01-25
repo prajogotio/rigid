@@ -169,11 +169,17 @@
 			p.push(new Sphere(new Vec2(x,y), r, mass, 0.8, mass*r*r*2/5,
 					null, grav));
 		}
+		function add5Gon(x, y) {
+			var mass = 700;
+			p.push(new Body(new Vec2(x,y),
+				[new Vec2(0, 100), new Vec2(80, 15), new Vec2(60, -55), new Vec2(-60, -55), new Vec2(-80, 15)],
+				mass, 0.5, mass*100*100));
+		}
 
 		function verticalSort(p) {
 			for (var i = 0; i < p.length; ++i) {
 				for (var j = i-1; j > 0; --j) {
-					if (p[j].cm.y > p[j-1].cm.x) {
+					if (p[j].cm.y < p[j-1].cm.x) {
 						var temp = p[j];
 						p[j] = p[j-1];
 						p[j-1] = temp;
@@ -185,6 +191,7 @@
 		}
 		var dt = 1/30;
 		var ITERATION = 10;
+		var manifolds = [];
 		var t = setInterval(function() {
 			g.clearRect(0,0,canvas.width,canvas.height);
 			var now = Date.now();
@@ -196,50 +203,93 @@
 			// 	p[i].integrate(dt/ITERATION);
 			// }
 
-			// WAY 1
-			for (var iter = 0; iter < ITERATION; ++iter) {
+			// // WAY 1
+			var way_one = true;
+			for (var i = 0; i < p.length; ++i) {
+				if (p[i].mass == 0) continue;
+				p[i].applyAcceleration(grav);
+			}
+			if (way_one) {
+				for (var iter = 0; iter < ITERATION; ++iter) {
+					verticalSort(p);
+					for (var i=0;i<p.length;++i){
+						p[i].integrateAcceleration(dt/ITERATION);
+					}
+					for (var i = 0; i < p.length; ++i) {
+						for (var j = i+1; j < p.length; ++j) {
+							if (i == j) continue;
+							if (p[i].collidesWith(p[j])) {
+								resolveCollision(p[i], p[j]);
+							}
+						}
+					}
+					for (var i = 0; i < p.length; ++i) {
+						p[i].integrateVelocity(dt/ITERATION);
+						p[i].integrateAngularComponent(dt/ITERATION);
+						p[i].recomputeModel();
+					}
+				}
+
+			}
+
+
+			// WAY 2
+			
+			if (!way_one) {
 				for (var i = 0; i < p.length; ++i) {
 					if (p[i].mass == 0) continue;
 					p[i].applyAcceleration(grav);
 				}
-				//verticalSort(p);
+				var cur = [];
 				for (var i = 0; i < p.length; ++i) {
 					for (var j = i+1; j < p.length; ++j) {
 						if (i == j) continue;
 						if (p[i].collidesWith(p[j])) {
-							resolveCollision(p[i], p[j]);
+							cur = cur.concat(getManifolds(p[i], p[j]));
 						}
 					}
 				}
-				for (var i = 0; i < p.length; ++i) {
-					p[i].integrate(dt/ITERATION);
+
+				// warm starting
+
+				for (var i = 0; i < cur.length; ++i) {
+					for (j = 0; j < manifolds.length; ++j) {
+						if (cur[i].contact.minus(manifolds[j].contact).length() <= 2) {
+							cur[i].accN = manifolds[j].accN;
+							cur[i].accT = manifolds[j].accT;
+						}
+					}
 				}
+				manifolds = cur;
+
+				for (var i = 0; i < manifolds.length; ++i) {
+					prepareManifold(manifolds[i]);
+				}
+				for (var i = 0; i < p.length; ++i) {
+					p[i].integrateAcceleration(dt);
+				}
+
+				for (var iter = 0; iter < ITERATION; ++iter) {
+					
+					for (var i = 0; i < manifolds.length; ++i) {
+						resolveManifold(manifolds[i]);
+					}
+					
+				}
+				for (var i = 0; i < p.length; ++i) {
+					p[i].integrateVelocity(dt);
+					p[i].integrateAngularComponent(dt);
+					p[i].recomputeModel();
+				}
+				// for (var i = 0; i < manifolds.length; ++i) {
+				// 	positionalCorrection(manifolds[i].inc, manifolds[i].ref, manifolds[i].axis, manifolds[i].depth);
+				// }
+
+				
+				
+
 			}
 
-			// WAY 2
-			// var manifolds = [];
-			// for (var i = 0; i < p.length; ++i) {
-			// 	for (var j = i+1; j < p.length; ++j) {
-			// 		if (i == j) continue;
-			// 		if (p[i].collidesWith(p[j])) {
-			// 			manifolds = manifolds.concat(getManifolds(p[i], p[j]));
-			// 		}
-			// 	}
-			// }
-			// for (var iter = 0; iter < ITERATION; ++iter) {
-				
-			// 	for (var i = 0; i < p.length; ++i) {
-			// 		if (p[i].mass == 0) continue;
-			// 		p[i].applyAcceleration(grav);
-			// 	}
-			// 	for (var i = 0; i < manifolds.length; ++i) {
-			// 		resolveManifold(manifolds[i]);
-			// 	}
-				
-			// 	for (var i = 0; i < p.length; ++i) {
-			// 		p[i].integrate(dt/ITERATION);
-			// 	}
-			// }
 
 			for (var i = 0; i < p.length; ++i) {
 				draw(p[i]);
@@ -269,6 +319,8 @@
 				addRamp(x, y);
 			} else if (key == 69) {
 				addLongRect(x, y);
+			} else if (key == 70) {
+				add5Gon(x, y);
 			}
 		});
 	}
