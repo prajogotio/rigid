@@ -26,7 +26,7 @@ function Body(cm, arrayOfVertices,
 	this.angularPosition = 0;	// radian
 
 	this.staticFriction = 0.33;
-	this.dynamicFriction = 0.12;
+	this.dynamicFriction = 0.22;
 
 	this.ANGULAR_DECAY = 1;
 

@@ -125,7 +125,7 @@
 			p.push(new Body(new Vec2(x, y),
 							[new Vec2(-width/2, width/2), new Vec2(width/2, width/2),
 							new Vec2(width/2, -width/2), new Vec2(-width/2, -width/2)],
-							mass, 0.3, mass*width*width,
+							mass, 0.3, mass*width*width/6,
 							null,
 							null));
 			if (p.length > 4) {
@@ -204,7 +204,7 @@
 			// }
 
 			// // WAY 1
-			var way_one = true;
+			var way_one = false;
 			for (var i = 0; i < p.length; ++i) {
 				if (p[i].mass == 0) continue;
 				p[i].applyAcceleration(grav);
@@ -254,9 +254,10 @@
 
 				for (var i = 0; i < cur.length; ++i) {
 					for (j = 0; j < manifolds.length; ++j) {
-						if (cur[i].contact.minus(manifolds[j].contact).length() <= 2) {
+						if (cur[i].contact.minus(manifolds[j].contact).length() <= 4) {
 							cur[i].accN = manifolds[j].accN;
 							cur[i].accT = manifolds[j].accT;
+							break;
 						}
 					}
 				}

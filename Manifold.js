@@ -25,7 +25,7 @@ function getManifolds(A, B) {
 function prepareManifold(m) {
 	var baumgarte = 0.2;
 	var dt = 1/30;
-	var slop = 0.01;
+	var slop = 0.2;
 
 	var A = m.inc;
 	var B = m.ref;
