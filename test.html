@@ -105,7 +105,7 @@
 	}
 
 	function testPlatform() {
-		var grav = new Vec2(0, 300);
+		var grav = new Vec2(0, 1000);
 		var p = [];
 		p.push(new Body(new Vec2(canvas.width/2, 500),
 						[new Vec2(-400, 30), new Vec2(400, 30),
@@ -166,7 +166,7 @@
 		function addSphere(x, y) {
 			var r = 20;
 			var mass = 70;
-			p.push(new Sphere(new Vec2(x,y), r, mass, 0.8, mass*r*r*2/5,
+			p.push(new Sphere(new Vec2(x,y), r, mass, 1, mass*r*r*2/5,
 					null, grav));
 		}
 		function add5Gon(x, y) {
@@ -189,7 +189,7 @@
 				}
 			}
 		}
-		var dt = 1/30;
+		var dt = 1/60;
 		var ITERATION = 10;
 		var manifolds = [];
 		var t = setInterval(function() {
@@ -215,6 +215,7 @@
 					for (var i=0;i<p.length;++i){
 						p[i].integrateAcceleration(dt/ITERATION);
 					}
+
 					for (var i = 0; i < p.length; ++i) {
 						for (var j = i+1; j < p.length; ++j) {
 							if (i == j) continue;
@@ -223,6 +224,7 @@
 							}
 						}
 					}
+
 					for (var i = 0; i < p.length; ++i) {
 						p[i].integrateVelocity(dt/ITERATION);
 						p[i].integrateAngularComponent(dt/ITERATION);
@@ -275,15 +277,17 @@
 					for (var i = 0; i < manifolds.length; ++i) {
 						resolveManifold(manifolds[i]);
 					}
-					
+
 				}
+
+
 				for (var i = 0; i < p.length; ++i) {
 					p[i].integrateVelocity(dt);
 					p[i].integrateAngularComponent(dt);
 					p[i].recomputeModel();
 				}
 				// for (var i = 0; i < manifolds.length; ++i) {
-				// 	positionalCorrection(manifolds[i].inc, manifolds[i].ref, manifolds[i].axis, manifolds[i].depth);
+				// 	positionalCorrection(manifolds[i].inc, manifolds[i].ref, manifolds[i].axis, manifolds[i].depth*0.1);
 				// }
 
 				

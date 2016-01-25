@@ -23,9 +23,9 @@ function getManifolds(A, B) {
 }
 
 function prepareManifold(m) {
-	var baumgarte = 0.2;
-	var dt = 1/30;
-	var slop = 0.2;
+	var baumgarte = 0.11;
+	var dt = 1/60;
+	var slop = 1;
 
 	var A = m.inc;
 	var B = m.ref;
@@ -34,9 +34,9 @@ function prepareManifold(m) {
 
 	var rA = c.minus(A.cm).cross(n);
 	var rB = c.minus(B.cm).cross(n);
-	var e = 0; Math.min(A.e, B.e);
+	var e = Math.min(A.e, B.e);
 	var massNormal = A.inverseMass + B.inverseMass + rA*rA*A.inverseMomentOfInertia + rB*rB*B.inverseMomentOfInertia;
-	var vbias = baumgarte/dt*Math.max(0, m.depth-slop);
+	var vbias = -baumgarte/dt*Math.max(0, m.depth-slop);
 
 	var t = n.copy().rotate(90);
 	var rAt = c.minus(A.cm).cross(t);
@@ -48,6 +48,14 @@ function prepareManifold(m) {
 	m.vbias = vbias;
 	m.e = e;
 
+	var vrel = computeRelativeVelocity(A, B, c);
+	var proj = vrel.dot(n);
+	if (proj < -300) {
+		var ve = m.e*proj;
+		if (ve < m.vbias) {
+			m.vbias = ve;
+		}
+	}
 
 	A.applyImpulse(-m.accN, n);
 	B.applyImpulse(m.accN, n);
@@ -72,8 +80,8 @@ function resolveManifold(m) {
 
 	var vrel = computeRelativeVelocity(A, B, c);
 	var proj = vrel.dot(n);
-
-	var j = (-(1+m.e)*proj+m.vbias)/m.massNormal;
+	
+	var j = (-proj-m.vbias)/m.massNormal;
 	var temp = Math.max(m.accN+j, 0);
 	var jn = temp - m.accN;
 	m.accN = temp;
